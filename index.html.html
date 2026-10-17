@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Сімейний фінплан</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231E5E8C'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='Arial' font-weight='700'%3E$%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@500;700&display=swap">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<style id="app-css">
+/* Layout: header + sticky tab bar with live totals; one tab visible at a time. Color = meaning: green in, rust out, blue saved, teal/bronze assets */
+:root{
+  --bg:#F2F4F6; --panel:#FFFFFF; --fg:#14202B; --muted:#5B6875; --line:#DDE3E9; --input:#F7F9FA;
+  --accent:#1E5E8C; --accent-soft:#E4EEF6; --on-accent:#FFFFFF;
+  --inc:#2B7A4E; --inc-soft:#E5F1E9;
+  --exp:#B4512F; --exp-soft:#F8EBE5;
+  --warn:#A06A0C; --warn-soft:#FBF1DC;
+  --astinc:#1C8580; --astval:#A08452; --mot:#6A4BA8; --mot-soft:#EEE9F7; --teal-soft:#E2F2F1;
+  --f-display:"Unbounded","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151B; --panel:#17202A; --fg:#E5EBF0; --muted:#94A3B1; --line:#283541; --input:#111920;
+  --accent:#6CB2E0; --accent-soft:#1A3142; --on-accent:#0F151B; --inc:#62C38E; --inc-soft:#16302A; --exp:#EE8B6C; --exp-soft:#3A2420;
+  --warn:#E2B24E; --warn-soft:#3A2F15; --astinc:#4FC3BC; --astval:#CDB07A; --mot:#B59CEB; --mot-soft:#2A2340; --teal-soft:#14302F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F151B; --panel:#17202A; --fg:#E5EBF0; --muted:#94A3B1; --line:#283541; --input:#111920;
+  --accent:#6CB2E0; --accent-soft:#1A3142; --on-accent:#0F151B; --inc:#62C38E; --inc-soft:#16302A; --exp:#EE8B6C; --exp-soft:#3A2420;
+  --warn:#E2B24E; --warn-soft:#3A2F15; --astinc:#4FC3BC; --astval:#CDB07A; --mot:#B59CEB; --mot-soft:#2A2340; --teal-soft:#14302F; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:20px 64px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:1.5rem;letter-spacing:-.01em;margin:0}
+.hright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status{font-size:.82rem;color:var(--muted)}
+.status.dirty{color:var(--warn);font-weight:500}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);padding:7px 12px}
+button:hover{border-color:var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+button.primary:disabled{opacity:.45;cursor:default}
+button.add{border-style:dashed;color:var(--accent);background:transparent}
+button.del,button.ico{border:none;background:transparent;color:var(--muted);padding:3px 7px;font-size:1rem;line-height:1}
+button.del:hover{color:var(--exp)} button.ico:hover{color:var(--accent)}
+button.ico:disabled{opacity:.3;cursor:default}
+button.small{font-size:.82rem;padding:5px 10px;white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:none;border-radius:0;padding:6px 10px;font-size:.78rem;font-weight:600;letter-spacing:.04em;color:var(--muted);background:transparent}
+.seg button.on{background:var(--accent);color:var(--on-accent)}
+
+/* sticky nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:2px;overflow-x:auto;padding:3px;background:var(--panel);border:1px solid var(--line);border-radius:10px;max-width:100%}
+.tab{border:none;background:transparent;padding:7px 14px;border-radius:7px;color:var(--muted);font-weight:500;white-space:nowrap}
+.tab:hover{color:var(--fg)}
+.tab.on{background:var(--accent);color:var(--on-accent)}
+.mini{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.8rem;color:var(--muted)}
+.mini b{font-family:var(--f-num);font-weight:600;font-variant-numeric:tabular-nums;margin-left:4px}
+
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0}
+h2{font-family:var(--f-display);font-weight:500;font-size:1.05rem;margin:0}
+.sechead{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
+.sechead .sum{font-family:var(--f-num);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem}
+.sechead .sum b{color:var(--fg);font-weight:500}
+h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:4px 0 0;font-weight:600;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 8px}
+h3 span{font-family:var(--f-num);letter-spacing:0;text-transform:none;font-weight:500}
+.explain{font-size:.84rem;color:var(--muted);margin:0;max-width:80ch}
+.note{font-size:.82rem;color:var(--muted)}
+.neg{color:var(--exp)!important}
+.posc{color:var(--inc)!important}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.76rem;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--inc-soft);color:var(--inc)} .pill.bad{background:var(--exp-soft);color:var(--exp)} .pill.mid{background:var(--warn-soft);color:var(--warn)}
+.prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent)}
+.lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px 16px;align-items:end}
+.fields label,.controls label{display:flex;flex-direction:column;justify-content:flex-end;gap:4px;font-size:.8rem;color:var(--muted);min-width:0}
+.fgroup{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:12px;background:var(--bg)}
+#cush,#nextgoal{display:flex;flex-direction:column;gap:10px}
+section[data-c]>.sechead h2::before,section[data-c]>.cardhead h2::before,.card[data-c]>.cardhead h2::before{content:'';display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:10px;vertical-align:1px;background:var(--mk)}
+[data-c=inc]{--mk:var(--inc)} [data-c=exp]{--mk:var(--exp)} [data-c=acc]{--mk:var(--accent)} [data-c=teal]{--mk:var(--astinc)} [data-c=warn]{--mk:var(--warn)} [data-c=mot]{--mk:var(--mot)} [data-c=val]{--mk:var(--astval)}
+section[data-c=inc]{background:linear-gradient(var(--inc-soft),var(--panel) 90px)}
+section[data-c=exp]{background:linear-gradient(var(--exp-soft),var(--panel) 90px)}
+section[data-c=teal]{background:linear-gradient(var(--teal-soft),var(--panel) 90px)}
+section[data-c=warn]{background:linear-gradient(var(--warn-soft),var(--panel) 90px)}
+section[data-c=mot]{background:linear-gradient(var(--mot-soft),var(--panel) 90px)}
+section[data-c=acc]{background:linear-gradient(var(--accent-soft),var(--panel) 90px)}
+.tdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--mk)}
+.tab.on .tdot{background:var(--on-accent)}
+.cell{display:contents}.ml{display:none}
+.hbtns{display:inline-flex;gap:6px}
+.pill.acc{background:var(--accent-soft);color:var(--accent)} .pill.mot{background:var(--mot-soft);color:var(--mot)}
+.legend-types{display:flex;flex-wrap:wrap;gap:6px}
+.role .rt .pill{font-size:.68rem;padding:1px 8px;margin-right:2px}
+.stack{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
+.stack input,.stack select{width:100%}
+.sales{display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--line);padding-top:12px}
+.sales table td,.sales table th{padding:6px 4px;font-size:.84rem}
+.sales table th{white-space:normal;font-size:.64rem;line-height:1.3}
+.sales .seg button{font-size:.74rem;padding:5px 8px;letter-spacing:0}
+.resetbar{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:12px;background:var(--exp-soft);border:1px solid var(--exp)}
+.resetbar .row2{display:flex;gap:8px;flex-wrap:wrap}
+button.danger{background:var(--exp);border-color:var(--exp);color:var(--on-accent);font-weight:600}
+.callout.mot{background:var(--mot-soft)} .callout.mot .cardbig{color:var(--mot)}
+.checks{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:.88rem}
+.checks label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.checks input{width:auto;accent-color:var(--accent);margin:0}
+
+/* overview */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tile{border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-width:0;border:1px solid var(--line)}
+.tile.t-net{background:var(--inc-soft);border-color:transparent}
+.tile.t-exp{background:var(--exp-soft);border-color:transparent}
+.tile.t-sur{background:var(--accent-soft);border-color:var(--accent)}
+.big{font-family:var(--f-num);font-size:1.5rem;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:4px}
+.t-net .big{color:var(--inc)} .t-exp .big{color:var(--exp)} .t-sur .big{color:var(--accent)}
+.yr{font-family:var(--f-num);font-size:.85rem;font-variant-numeric:tabular-nums}
+.tile .note{margin-top:4px;font-size:.78rem}
+.assetline{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:.86rem;color:var(--muted)}
+.assetline b{font-family:var(--f-num);color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
+.duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card.hi{border-color:var(--accent);background:var(--accent-soft)}
+.cardhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.cardbig{font-family:var(--f-display);font-size:1.3rem;font-weight:500;line-height:1.25}
+.kv{display:flex;flex-direction:column;gap:4px}
+.kv div{display:flex;justify-content:space-between;align-items:baseline;gap:4px 12px;flex-wrap:wrap;font-size:.86rem;color:var(--muted)}
+.kv b{font-family:var(--f-num);font-weight:500;color:var(--fg);font-variant-numeric:tabular-nums;margin-left:auto}
+.kv div.tot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px;color:var(--fg);font-weight:600}
+.kv div.tot b{font-weight:600}
+.inline{display:flex;align-items:center;gap:8px;font-size:.84rem;color:var(--muted);flex-wrap:wrap}
+.inline input{width:90px}
+
+/* savings */
+.controls{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:12px 16px;align-items:end}
+.slide{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.slide input[type=range]{flex:1 1 160px;accent-color:var(--accent);padding:0;border:none;background:none;min-width:0}
+.slide input.n{width:110px;flex:none}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.wide{min-width:600px}
+th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;vertical-align:bottom}
+td{font-family:var(--f-num);font-size:.9rem}
+th:first-child,td:first-child{text-align:left;font-family:var(--f-body)}
+th.l{text-align:left}
+td.age{font-family:var(--f-display);font-size:.95rem;text-align:left}
+td.tot{font-weight:600}
+td.c-save{color:var(--accent)} td.c-ai{color:var(--astinc)} td.c-av{color:var(--astval)}
+td.barcell{width:24%;min-width:120px}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+.bar i{display:block;height:100%}
+
+/* goals queue */
+.queue{display:flex;flex-direction:column;gap:10px}
+.qi{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;border:1px solid var(--line);border-radius:12px;padding:14px;align-items:start}
+.qi.off{opacity:.5}
+.qi.next{border-color:var(--accent);background:var(--accent-soft)}
+.qn{width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--f-num);font-weight:600;font-size:.85rem}
+.qi.next .qn{background:var(--accent);color:var(--on-accent)}
+.qbody{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qtop{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.qname{font-weight:600}
+.qtop input.gname{font-weight:600;font-size:.98rem;background:transparent;border-color:transparent;padding:4px 6px;margin-left:-6px;width:auto;min-width:120px;flex:1 1 160px}
+.qtop input.gname:hover,.qtop input.gname:focus{border-color:var(--line);background:var(--input)}
+.qtop input.n{width:130px}
+.qwhen{font-family:var(--f-display);font-size:1.1rem;font-weight:500}
+.qsub{font-size:.84rem;color:var(--muted)}
+.qctl{display:flex;flex-direction:column;align-items:center;gap:2px}
+.qctl label{display:flex;align-items:center;cursor:pointer;padding:3px}
+.qctl input{width:auto;accent-color:var(--accent);margin:0}
+.linkbtn{border:none;background:none;color:var(--accent);padding:0;font-size:.82rem;text-decoration:underline;text-underline-offset:2px}
+
+/* what-if */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border-radius:999px;padding:5px 12px;font-size:.84rem;display:inline-flex;gap:6px;align-items:baseline}
+.chip small{font-family:var(--f-num);color:var(--muted);font-size:.75rem}
+.chip.off{text-decoration:line-through;opacity:.55;border-style:dashed}
+.chip.inc{border-color:var(--inc)} .chip.exp{border-color:var(--exp)}
+td.d-pos{color:var(--inc)} td.d-neg{color:var(--exp)}
+
+/* motivation */
+.people{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-size:.8rem;padding:4px 10px;border-radius:999px}
+.roles{display:flex;flex-direction:column}
+.role{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:4px 10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.role:last-child{border-bottom:none}
+.role .rn{font-family:var(--f-num);color:var(--muted);font-size:.78rem}
+.role .rt{font-weight:500;min-width:0}
+.role .rt small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.role .rs{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:.88rem;text-align:right}
+.role .rs small{display:block;color:var(--muted);font-size:.72rem}
+.callout{background:var(--inc-soft);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.callout .cardbig{color:var(--inc)}
+
+/* budget editors */
+.rows{display:flex;flex-direction:column;gap:0}
+.row{display:grid;gap:6px;align-items:center;padding:3px 0;border-bottom:1px solid var(--line)}
+.row.head{border-bottom:none}
+.rows .row:last-child{border-bottom:none}
+.row input,.row select{padding:4px 8px;font-size:.88rem;border-color:transparent;background:transparent}
+.row input:hover,.row select:hover,.row input:focus,.row select:focus{border-color:var(--line);background:var(--input)}
+.row input.n{background:var(--input)}
+.row.inc{grid-template-columns:minmax(0,1fr) 100px 140px 70px 190px 28px}
+.row.ast{grid-template-columns:minmax(0,1fr) 96px 86px 140px 70px 190px 28px}
+.row.exp{grid-template-columns:minmax(0,1fr) 100px 140px 190px 28px}
+.row.head{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding-bottom:2px}
+.row.head .r{text-align:right}
+.row.head>div{white-space:nowrap}
+input,select{font:inherit;font-size:.92rem;width:100%;min-width:0;border:1px solid var(--line);background:var(--input);color:var(--fg);border-radius:6px;padding:6px 8px}
+input.n{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
+.mo{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums;font-size:.92rem}
+.mo small{display:inline;margin-left:8px;color:var(--muted);font-size:.72rem;font-family:var(--f-body)}
+.row .mo{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media (max-width:860px){
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .duo,.people{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  section{padding:16px}
+  .controls{grid-template-columns:1fr 1fr}
+  .controls label:first-child{grid-column:1 / 3}
+  .row.head{display:none}
+  .row.inc,.row.exp,.row.ast{grid-template-columns:minmax(0,1fr) 96px 28px;gap:2px 6px;padding:6px 0}
+  .cell{display:contents}.ml{display:none}
+  .row .c-name{grid-column:1;grid-row:1} .row .c-del{grid-column:3;grid-row:1}
+  .row .c-amt input,.row .c-amt{grid-column:2;grid-row:1}
+  .row .c-freq,.row .c-freq select{grid-column:1;grid-row:2}
+  .row.exp .c-mo{grid-column:2 / 4;grid-row:2}
+  .row.inc .c-tax,.row.inc .c-tax input{grid-column:2;grid-row:2} .row.inc .c-mo{grid-column:1 / 4;grid-row:3}
+  .row.ast .c-val,.row.ast .c-val input{grid-column:2;grid-row:1} .row.ast .c-amt,.row.ast .c-amt input{grid-column:2;grid-row:2}
+  .row.ast .c-freq,.row.ast .c-freq select{grid-column:1;grid-row:2} .row.ast .c-tax,.row.ast .c-tax input{grid-column:2;grid-row:3}
+  .row.ast .c-mo{grid-column:1;grid-row:3}
+  .row .mo{text-align:right;font-size:.82rem}
+  .row.inc .c-mo,.row.ast .c-mo{text-align:left}
+  .row select{font-size:.8rem;color:var(--muted)}
+  .mo small{display:inline}
+  .th-mix,td.barcell{display:none}
+  table.wide{min-width:0}
+  th,td{padding:8px 5px}
+  h1{font-size:1.25rem}
+  .big{font-size:1.25rem}
+  .qi{grid-template-columns:28px minmax(0,1fr);}
+  .qctl{grid-column:1 / -1;flex-direction:row;justify-content:flex-end}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="application/json" id="state">{"cur": "$", "lang": "uk", "age": 0, "startSavings": 0, "sandbox": null, "savedAt": 1791951403521, "useAst": true, "sellAst": false, "showAstVal": false, "cushion": {"months": 6}, "rental": {"price": 300000, "dp": 25, "closing": 3, "rate": 7, "term": 30, "rent": 2200, "taxPct": 1.5, "insYr": 1500, "hoa": 250, "maintPct": 5, "vacPct": 5, "mgmtPct": 0, "mode": "mortgage"}, "queue": [{"id": "q-cushion", "type": "cushion", "on": true}, {"id": "q-rental", "type": "rental", "on": true}], "whatif": {"off": [], "incDrop": 0, "expRise": 0}, "motiv": {"p1": {"name": "", "role": "", "fam": "other", "inc": "i1", "extra": 1000, "commPct": 100, "salesBase": "total"}, "p2": {"name": "", "role": "", "fam": "other", "inc": "27ogc1l", "extra": 1000, "commPct": 100, "salesBase": "total"}}, "incomes": [{"id": "i1", "name": "Партнер 1", "amount": 0, "freq": "m", "tax": 30}, {"id": "27ogc1l", "name": "Партнер 2", "amount": 0, "freq": "m", "tax": 25}], "expenses": [{"id": "e1", "name": "Rent", "amount": 0, "freq": "m"}, {"id": "e2", "name": "Gas", "amount": 0, "freq": "m"}, {"id": "e3", "name": "Car Insurance", "amount": 0, "freq": "m"}, {"id": "e4", "name": "Groceries", "amount": 0, "freq": "m"}, {"id": "e5", "name": "Internet", "amount": 0, "freq": "m"}, {"id": "e6", "name": "Subscriptions", "amount": 0, "freq": "m"}, {"id": "e7", "name": "Entertainment", "amount": 0, "freq": "m"}, {"id": "e8", "name": "Alice", "amount": 0, "freq": "m"}, {"id": "e9", "name": "Utilities", "amount": 0, "freq": "m"}, {"id": "e10", "name": "Tolls", "amount": 0, "freq": "m"}, {"id": "e11", "name": "Health Insurance", "amount": 0, "freq": "h"}, {"id": "e12", "name": "Car Maintenance & Repairs", "amount": 0, "freq": "y"}, {"id": "e13", "name": "Mobile Phone Plan", "amount": 0, "freq": "y"}, {"id": "e14", "name": "Clothing", "amount": 0, "freq": "y"}, {"id": "e15", "name": "Gifts", "amount": 0, "freq": "y"}, {"id": "e16", "name": "Re-parole Fees", "amount": 0, "freq": "y"}, {"id": "e17", "name": "Work Permit (EAD)", "amount": 0, "freq": "y"}, {"id": "e18", "name": "LLC: Accounting & Filings", "amount": 0, "freq": "y"}, {"id": "cjed91d", "name": "Садік Аліси", "amount": 0, "freq": "m"}, {"id": "k6o2aer", "name": "Моргич", "amount": 0, "freq": "m"}], "assets": []}</script><script type="application/json" id="vault">{"s": "U7NWaUxHVIJI/uE4qlKiUg==", "i": "gwe1CAcue84uJNzl", "c": "eg3FnFbvCn9hNNWZjylbbX+RtsNZP9+cGNrsMSPT5aZKcaWyrECgGnxiy0ZKm4jGFmKjlimlz8tMu4yDpq3nv5269PPzXKWmh1groHnFG7VTluCWie0kAnMQ+CpzbaPUOVepWUnT6jGZS90ZD3oAtzmDlv3OjdoUOHUoz9QpLxyw4Vq5QOI8JOILN2yHF8sRu67GEJLKXih3K//aC/C2YdChQiovILQEu99c1F4rl2kJwgKj9cyg2fQgcFwz18crE0mqHS1LjNhAeoq9pqoO9ZK50nAC6uH+O7lNAfyMsuCN8jew4SaAt20EniS5Ht3h+dD2RydUcZTpqF0wzhu+b11k6YMMzIjXi0oGtRyO6ICOkCTdAvI+Rex6TTvjUEx5kv3RdNLZJhlKTqO++Marta8OJmrY8BYLdEUXvin/Z4Wr+5nBAM8bF8vixMvqBEUoxrUUcrYeXEfHtXdidL15UQb2YBtxSkBTnFqoDj5tDMzcK+DuBhk0NP0zoQlqbWkFXUR1BLkQEl75V1CdMzWv70NEQl+i5hwXsCItk9BpWvcTwXySsFZFl2DD0tqEMwvbPRBGJmrSKGKG421HVljBfJ3BQ2KJ0qmoFD+zZfdx9gTOWs21al/wJk0ctoN0WdaudMsyrLDolpMOv59NA2tfnINxUToMADJOlbsw9jSGVvmCZBoem5CoTs/Ld9bXgDJHRmxORUv3EEe+oojHhjbqjrouPNl6GzOf0zjeaOIFOAlFPldNzJ+h/FLlU/uOQYNjbQPiYl7r61g+goYGxmGDUUoLsGwIft0Ghnn7xwgjpQvcPNQOEut/YX9v3YNWK1KoT6Y8CAWzzkcAp2vQa4ANMzT8HSpiafgDs8Rte+2Yesgd/fz+gZrxlk51zegLVtD6JQia7kgXWpBu+IKz5/3NjnNEckfuSS6UliCKbWm3sgpuv412D7w98s4S/2RYi3r6tMdxvXPEbPa4t2oEYP+zmaJpkMTOual2+HlTPLIYebI9GGsJeCVrjEymyviTOD83sLYHZz7wi1UVh56XjWbMXysxmAePVz6Y57++9oxwMJruybg5VKmI/hKQWLp7XMM9Bllm0VtL0TvvVOtD4bBBI5+vct/CgJNoSD9dz9O1L8xTjFtJ9+FZeeiNy7NYS2+wGsUeRLyfEz65FyPADklOegvk0Le2ALgGH5P9e2BsaB3DpVIkbF25FqB2vRUyh4pqYjY7I9NhXDSKOZmWs+ec0URpb7tmTK4ILGxR9VE7bk4clvh5EmtRX4R0CcE1oAGuiNljsj/A6iq0OBptK6SXidlhtZxhIbP9NkR36XVxiOz9bdq5bAsAQ3N1NsCTXtqCkWoJOxut9N4J2Gf7sAREoQJa95sVkgtw97qj+/k7HIyWcCH0a7bycEEo5B4fJr08HOLuYCfpMWBAV31ffpxIEEDdA0dnsmflSqWWQAmF+dCDo2wgy71bxmEZSRKzbZdWp6m2DtcG0tcra7Lrao7jJKeQMJqgesFPh9BjyRGMSn5C12PPXkKLGcMkq3ODCOfiv8+ieOEMPlQ5t9qSeN8A82WR+I2Qq1PUdpyIDF0hKCX4N43uO5S3Z4s5c2QsXtYz6hqzv3X9QQ5zVGUmHfusYT0DW5k0IZZsM8kYM2qRZA5SuffqZGPCwaKf2tAxqCzWjRcppWvfOgJa7r0WTgw66cBwn0lbLkOwnetQ1AVcnQ+D456lEQkHdtRNKsyZ0AqebgePaijtPFnjJoyLICXU0ikfNd1B2YLxfEJ27EhEZLzF5FYa7212Gg7ZArjuhqOAN3TopkCtEtVLxdhMP5vk9b/bmceukYv2moKBbqQdGbV7c2U24OsnChWqHh+gWv5ED8cbAGLggeSf05LjR1YDJiNaKXJU5Ex/87iTRe/WGcsm0eTXbz6FyUluSMmcqolb9ejJr7BnxkjHsN+GNBy14JGdUGUXofgY2AO8+/c3mx5z0NopnUlcpzEXI6XL7wXKHWPjrh62zXLAxlovtzAOByRUlcIt8k04Y9t2lZd6rHbPt29SYZukQnS+9xmYJLr95/4b02UTX3kZTKFa0QuU+ohqIeKA28j/jQkNK+FA8/BhnkFoya69/pQKkvKZKSNjPJ8bbkhjFymSNTdGiaoDZ8INhP7L8D0oA4+tjAUh2N3Xt5gFDeyhZDbYCATE3ESHtKHjEYoblykQLGFR1V7Gz/ZJ1MFRXzBuuFOL6Jz+cBCIUnmXHeMHjH1hpNAmQeyJSILFRR4BSyFbjUXowNqX4a8E1yDMeEwuzm329aLwoINCXGn/g5X/4WsV0tC8Rmw/7Lds9HUTZItKx6Guqm6eV85CAhgFGencvpZGz99dw+SrinygqwCw65+FQeSeOOw6gmOxoKTQuXV0duiKWVyTno8gTz/uMT0aYVLVmuqe7J1XQ0/hR57+W4dFmY42zcVL/ZIpAfAZKOY7R+53zxKtrMmqunZb+4XGP1ah4C+vWfWaXFG2P2Vkk9O9wvOIgn1Prae1D7Ywn4+0X22AENNwLsd4n5LlP4NgT9m6CEQSwZydbl37LHR8ageyi1F3W5a67+VtZnjYDa6Bu5JonWLWDuaVFA2Lm4/a1vHQCkWh0UEXEVm99nJUfT2IBSVJqrfFCstrZJoV4lGb58dh1KbceYpv6L03jCHLo5sLijphMmAIsYWi3NJUAiHhHXIW1Znx/NDk9bpSNX5IxGC7zYVPOH5ugLjTYNj1dztL7Z0vpDx3cBOyvrAOyf6NoirDyyBxtj3Lcgl0CiV0MKqk3hPDMkNhyujbTSRn39SkR+PlA8I8anY47hD+Mv7vDuNULP50lVpgmYwpG8m02AvcrleBlH+idOc2Ev99q6f/rn+bo/dySnXp2uZz/cT/LSw7ZvFpDjJgLZ1TZjOvdahfWw2zlNfpqS5DDBeGZUNwxB8N9flvKW/5eNG9h+JZ4c1B78j7v/+bZmy/35aPg/qT5HcgvrJ96tk9C7TtusHGDoymEPIIvPjlWDTE58cWCfLxb2o51feQ+VL5gJjRirXW3P86aauo1t9q6tcrOH/dv1i7x6Ux/rwi9hFN7HC7DDRXHhYzIg9uJx06dx/R2j5icXhsUktyjSjjv1hWS/Aggucg54zFHDRDpbQmCaG7USSVxgUJPFihcado1ZOPf8Gixcuxm2Mfb4Sp+b/Asec/Bf1N5KITV2J9i+WESpBRjT1hdeL5qgqapT+bbkf8AMs8KxA+8oSfA/w1I1Tgyhgd5DXR19I/1jjR7N6t/k8bRYT2EZV2EY4tuSKv4hAtXf+utULJuwTQdAJKJBfUkLQ0BkpmtyWGoH8yW/Guy/5xKghtWbqXvrkaFbflaiB3s+teSVBlIOu5mVEVEuYZ6N7nEbk2uxjN0y004ISsGzYUcZGTOWBCrnjKu+heTsB1OcKqI0VZJE3YdpGu8YD8/izufAHe7xmgZr8+exbWjF+vEtcGEMlueUIE/jAwFJzvwiUHEOacFgbpDy/tltECBv7WWz5MG/ioVvOfQuRMjhrhgdOJGz/rDUsZyGakq7m9L6Ekce5GjaNuWbx9w0fQnBZJPbg18Eskld1Qrq+f3MzpkaQOzrWqEhD1nwboMKBDr2Bv2DDXVfH8cbg14/zOUl43rAMMHmZfDm0O76E1A4QGDR5xgaGC6Aa++vb57wkHdi1+GVCEX6KOMw0ILWSvZZ5H9gVozwhXrS+RCIXPj66N0wv0uBXgC5WQNXKsaFleZEI6g3sEtNVSjRgCj/QVKkE0jOfoXK/Lmi36dWg8qH/bc+NackgwceWAENBuRgMvhWI6pcfXraYOC1rVIGmbxYj1JsLX4Mja9QOqFsBywIwyY/ZVCAqgqjqCinIys3sXcPDS3g1UKtEblQ==", "n": 600000}</script>
+<script id="app-js">
+(function(){
+/* ================= i18n ================= */
+const ukPl=(n,one,few,many)=>{n=Math.abs(Math.round(n));const t=n%10,h=n%100;return t===1&&h!==11?one:(t>=2&&t<=4&&(h<10||h>=20))?few:many};
+const T={
+uk:{
+  title:'Сімейний фінплан', save:'Зберегти', saving:'Зберігаю…', unsaved:'Є незбережені зміни', localOnly:'Зміни збережені лише в цьому браузері',
+  savedAt:d=>'Збережено '+d, saveFail:'Не вдалося зберегти. Зміни лишились у цьому браузері.', conflict:'Сторінку змінили в іншому вікні. Оновіть і спробуйте ще раз',
+  tabs:{budget:'Бюджет',overview:'Огляд',goals:'Цілі',rental:'Інвестквартира',whatif:'Стрес-тест',motiv:'Мотивація'},
+  net:'Чистий дохід', exp:'Витрати', sur:'Профіцит', def:'Дефіцит', cushion:'Подушка', perMo:'/ міс', perYr:'за рік',
+  months:n=>`${String(n).replace('.',',')} міс.`,
+  years:n=>`${n} ${ukPl(n,'рік','роки','років')}`,
+  dur:(y,m)=>(y?`${y} ${ukPl(y,'рік','роки','років')}`:'')+(y&&m?' ':'')+(m?`${m} міс.`:''),
+  monthNames:['січень','лютий','березень','квітень','травень','червень','липень','серпень','вересень','жовтень','листопад','грудень'],
+  gross:'Дохід до податків', srcCount:n=>`${n} ${ukPl(n,'джерело','джерела','джерел')} заробітку`, taxes:x=>`податки ${x} / міс`,
+  expSplit:(a,b)=>`щомісячні ${a} · нерегулярні ${b}`, pctNet:p=>`${p}% чистого доходу`,
+  astLine:(v,i,y)=>`<span><span class="dot" style="background:var(--astval)"></span>Активи окремо від бюджету: вартість <b>${v}</b></span><span><span class="dot" style="background:var(--astinc)"></span>дохід <b>${i}</b> / міс · <b>${y}</b> за рік</span>`,
+  cushionTitle:'Подушка безпеки', cushionCovers:m=>`Відкладеного вистачить на ${m} життя`,
+  cushionTargetLbl:'Ціль: місяців витрат', cushionTarget:'Потрібно', cushionHave:'Є зараз', cushionGap:'Не вистачає',
+  cushionEta:x=>`зберу за ${x} при поточному темпі`, cushionDone:'Подушка зібрана', cushionNever:'при поточному темпі не збереться',
+  stLow:'Мало', stOk:'Нормально', stGood:'Повна',
+  cushionExplain:'Гроші на випадок втрати доходу або великої непередбаченої витрати. Зазвичай 3–6 місяців витрат. Їх не витрачають, вони просто лежать.',
+  nextGoal:'Наступна ціль', noGoals:'Цілей поки немає',
+  savTitle:'Скільки я назбираю', saveMo:'Відкладаю на місяць', asNow:'Як зараз', alreadySaved:'Вже відкладено', myAge:'Мій вік зараз',
+  sbCustom:x=>`фактичний профіцит ${x} / міс`, sbActual:'рахую з фактичного профіциту', showAstVal:'Додати вартість активів',
+  cIn:'Через', cAge:'Вік', cSur:'З профіциту', cAi:'Дохід з активів', cAv:'Вартість активів', cTot:'Разом', cMix:'Склад',
+  savExplain:v=>`<b>З профіциту</b> — вже відкладене плюс «відкладаю на місяць» × місяці. <b>Дохід з активів</b> — що принесуть квартири за цей час, якщо його не витрачати.${v?' <b>Вартість активів</b> — скільки коштують самі квартири сьогодні.':''} Без відсотків і без інфляції.`,
+  goalsTitle:'Цілі по черзі', useAst:'Відкладати на цілі також дохід з активів', sellAst:'Продати квартири в Україні і вкласти',
+  goalRate:(r,h)=>`відкладаю ${r} / міс · вже є ${h}`,
+  queueExplain:'Гроші збираються спершу на першу ціль, потім на другу і так далі. Порядок міняється стрілками. Подушка не витрачається, а лишається відкладеною. Після покупки квартири її чистий потік від оренди додається до накопичень (або віднімається, якщо мінус).',
+  cushionItem:'Подушка безпеки', rentalItem:'Квартира під здачу (інвестиція)', rentalItemSub:(p,m)=>`${p} · ${m}`, modeMortgage:'з іпотекою', modeCash:'готівкою',
+  needLbl:'Потрібно', addGoal:'+ Додати ціль', newGoal:'Нова ціль',
+  never:'не накопичиться', now:'вже можна', inX:x=>`через ${x}`, ageAt:a=>`тобі буде ${a}`,
+  up:'Вище', down:'Нижче', inQueue:'Враховувати', del:'Видалити', setup:'Налаштувати', after:x=>`після покупки ${x} / міс до накопичень`,
+  rentalTitle:'Купівля квартири під здачу в оренду',
+  rentalIntro:'Це інвестиція: купуєш квартиру як актив і здаєш її орендарям. Тут видно, скільки своїх грошей потрібно на старті, чи покриває оренда іпотеку та всі витрати, і яку дохідність дадуть вкладені гроші.',
+  rentalNote:'Впиши реальну оренду для такої квартири — від неї залежить усе. Податок на нерухомість і страховка дуже різні по штатах і округах.',
+  fPrice:'Ціна житла, $', fDp:'Перший внесок, %', fClosing:'Закриття угоди, %', fRate:'Ставка іпотеки, %', fTerm:'Строк іпотеки, років',
+  fRent:'Оренда, $ / міс', fTax:'Податок на нерухомість, % / рік', fIns:'Страховка, $ / рік', fHoa:'HOA, $ / міс', fMaint:'Ремонти, % оренди', fVac:'Простій, % оренди', fMgmt:'Управління, % оренди',
+  withMortgage:'З іпотекою', allCash:'Готівкою', rRent:'Оренда', rVac:'Простій', rMort:'Іпотека (тіло + відсотки)', rTax:'Податок на нерухомість', rIns:'Страховка', rHoa:'HOA',
+  rMaint:'Ремонти', rMgmt:'Управління', rCf:'Чистий потік на місяць', rCash:'Свої гроші на старті', rCoc:'Дохідність на свої гроші', rCap:'Cap rate', rBe:'Оренда, щоб вийти в нуль',
+  vGood:'Окупає себе', vBad:x=>`Доплачуєш ${x} / міс`, useInGoals:'Рахувати в цілях так', inGoals:'використовується в цілях',
+  wiTitle:'Стрес-тест', wiExplain:'Перевір, що буде, якщо щось піде не так: вимкни дохід чи витрату натисканням або впиши, на скільки впаде заробіток чи зростуть витрати. Основна модель від цього не міняється.',
+  wiInc:'Доходи', wiExp:'Витрати', wiIncPct:'Заробіток впаде на, $ / міс (чистими)', wiExpPct:'Витрати зростуть на, $ / міс', wiAst:'Дохід з активів', wiReset:'Скинути сценарій',
+  colNow:'Зараз', colScen:'Сценарій', colDiff:'Різниця', wNet:'Чистий дохід / міс', wExp:'Витрати / міс', wSur:'Профіцит / міс', wRate:'Відкладаю на цілі / міс',
+  wCush:'Подушки вистачить на', wRun:'Протримаємось на відкладеному', wRunInf:'заощадження не чіпаємо', wGoals:'Дати цілей', wTap:'Натисни, щоб вимкнути або увімкнути',
+  incomeTitle:'Доходи', earnings:'Заробітки', assetsH:'Активи — окремо, не входять у бюджет', hNetAst:'Чисті / міс', expensesTitle:'Витрати', monthly:'Щомісячні', irregular:'Нерегулярні, розкладені на місяць',
+  hSource:'Джерело', hGross:'До податку', hFreq:'Як часто', hTax:'Податок %', hNet:'Чисті / міс', hAsset:'Актив', hValue:'Вартість', hIncome:'Дохід', hPerMo:'На місяць', hItem:'Стаття', hAmount:'Сума',
+  addIncome:'+ Додати заробіток', addAsset:'+ Додати актив', addMonthly:'+ Додати щомісячну витрату', addIrregular:'+ Додати нерегулярну витрату',
+  grossSmall:x=>`до податку ${x}`, perYrSmall:x=>`${x} / рік`, yieldSmall:p=>`${p}% річних`,
+  freq:{w:'щотижня',m:'щомісяця',q:'щокварталу',h:'раз на пів року',y:'раз на рік'}, name:'Назва',
+  motTitle:'Мотивація: що дасть більший заробіток',
+  motIntro:'Для кожного: напиши, хто ти зараз, і на скільки більше на місяць (до податку) хочеш заробляти. Поточний заробіток і податок система бере з вкладки «Бюджет». Нижче — що це дасть сім’ї і конкретні шляхи росту.',
+  linkedTo:'Дохід з Бюджету', extraLbl:'Плюс до заробітку, $ / міс до податку',
+  nowGross:'Зараз до податку', newGross:'Стане до податку', perYearAbbr:'/ рік', extraNet:x=>`+${x} / міс чистими`,
+  motResult:'Що це дасть сім’ї', motSur:(a,b)=>`Профіцит ${a} → ${b} на місяць`,
+  motGoals:'Коли досягнете цілей', colRaise:'З підвищенням', colFaster:'Швидше на',
+  motSav:y=>`Через ${y}`, rolesTitle:x=>`Де платять від ${x} на рік`, rolesNote:'Діапазони зарплат орієнтовні для США (з поправкою на Нью-Йорк), строки — типовий час на перехід. Базовий список працює без інтернету; кнопка AI підбирає шляхи під будь-яку професію за твоїм описом. Орієнтир, не гарантія.',
+  rolesNone:'Таку суму на цих посадах зазвичай не платять. Спробуй меншу.', rolesHint:'Найближчі посади до цієї суми',
+  same:'так само', rolesSec:'Куди рости, щоб заробляти більше',
+  salesTitle:'Скільки треба продавати', salesBaseTot:'весь новий дохід', salesBaseExtra:'тільки плюс', commLbl:'Мій % з угоди',
+  sCnt:'Продажів / міс', sEarn:'Мій заробіток з продажу', sDeal:'Розмір угоди', sNet:'Чистими / міс',
+  salesNote:(g,n)=>`Щоб заробити ${g} до податку = ${n} чистими на місяць`, salesHint:'«Мій заробіток» — що лишається тобі з одного продажу до податку. «Розмір угоди» — скільки має заплатити клієнт, якщо тобі йде вказаний відсоток.',
+  vaultBtn:'🔒 Мої дані', vaultPh:'Пароль', vaultOpen:'Відкрити', vaultWrong:'Невірний пароль', vaultBusy:'Перевіряю…', vaultCancel:'Скасувати',
+  resetBtn:'Очистити для іншої людини', resetAsk:'Це зітре доходи, активи, суми всіх витрат, цілі, вік, накопичення і дані в «Мотивації». Залишаться назви статей витрат і ставки податків.',
+  resetYes:'Так, очистити', resetNo:'Скасувати', resetTip:'Спершу збережи свої дані через «Експорт», щоб потім повернути їх «Імпортом».', partner:n=>`Партнер ${n}`,
+  pName:'Ім’я', whoNow:'Хто я зараз (посада, чим займаюсь)', whoPh:'напр. графічний дизайнер, водій, бухгалтер…', pField:'Сфера', autoDet:'визначено автоматично',
+  growFor:n=>`Шляхи для: ${n}`, growSub:(a,b,f)=>`Зараз ≈ ${a} / рік → ціль ${b} / рік · ${f}`,
+  ptype:{up:'ріст у ролі',shift:'легкий шифт',study:'донавчання',switch:'повний перехід',biz:'власна справа'},
+  pTime:m=>m<=1?'≈ 1 міс.':m<12?`≈ ${m} міс.`:`≈ ${String(Math.round(m/12*10)/10).replace('.',',')} р.`, pReach:'досягає цілі', pShort:x=>`до цілі не вистачає ${x}`,
+  aiBtn:'Підібрати під мене з AI', aiAgain:'Ще раз', aiShowBase:'Базовий список', aiBusy:'AI думає…', aiLbl:'Підібрано AI під твій опис:', aiFail:'AI не відповів, спробуй пізніше', aiDenied:'AI не дозволено', becomes:'стає реальним',
+  gBuy:'Покупка', gRent:'Оренда і витрати на утримання',
+  exportBtn:'Експорт', importBtn:'Імпорт', importErr:'Файл не схожий на фінплан', autoSaved:'Зберігається автоматично в цьому браузері'
+},
+en:{
+  title:'Family Finance Plan', save:'Save', saving:'Saving…', unsaved:'Unsaved changes', localOnly:'Changes kept in this browser only',
+  savedAt:d=>'Saved '+d, saveFail:'Could not save. Your changes are kept in this browser.', conflict:'The page changed in another window. Reload and try again',
+  tabs:{budget:'Budget',overview:'Overview',goals:'Goals',rental:'Rental investment',whatif:'Stress test',motiv:'Motivation'},
+  net:'Net income', exp:'Expenses', sur:'Surplus', def:'Deficit', cushion:'Safety net', perMo:'/ mo', perYr:'per year',
+  months:n=>`${n} mo`,
+  years:n=>`${n} ${n===1?'year':'years'}`,
+  dur:(y,m)=>(y?`${y} yr`:'')+(y&&m?' ':'')+(m?`${m} mo`:''),
+  monthNames:['January','February','March','April','May','June','July','August','September','October','November','December'],
+  gross:'Gross income', srcCount:n=>`${n} income ${n===1?'source':'sources'}`, taxes:x=>`taxes ${x} / mo`,
+  expSplit:(a,b)=>`monthly ${a} · irregular ${b}`, pctNet:p=>`${p}% of net income`,
+  astLine:(v,i,y)=>`<span><span class="dot" style="background:var(--astval)"></span>Assets kept outside the budget: value <b>${v}</b></span><span><span class="dot" style="background:var(--astinc)"></span>income <b>${i}</b> / mo · <b>${y}</b> per year</span>`,
+  cushionTitle:'Safety net', cushionCovers:m=>`Savings cover ${m} of expenses`,
+  cushionTargetLbl:'Target: months of expenses', cushionTarget:'Target', cushionHave:'Have now', cushionGap:'Short by',
+  cushionEta:x=>`filled in ${x} at the current pace`, cushionDone:'Safety net is full', cushionNever:'won’t fill at the current pace',
+  stLow:'Too thin', stOk:'Okay', stGood:'Full',
+  cushionExplain:'Cash for losing income or a big surprise bill. Usually 3–6 months of expenses. You don’t spend it; it just sits there.',
+  nextGoal:'Next goal', noGoals:'No goals yet',
+  savTitle:'How much I’ll save', saveMo:'I save per month', asNow:'Reset', alreadySaved:'Already saved', myAge:'My age now',
+  sbCustom:x=>`actual surplus ${x} / mo`, sbActual:'based on actual surplus', showAstVal:'Include asset value',
+  cIn:'In', cAge:'Age', cSur:'From surplus', cAi:'Asset income', cAv:'Asset value', cTot:'Total', cMix:'Mix',
+  savExplain:v=>`<b>From surplus</b> — what’s saved already plus “I save per month” × months. <b>Asset income</b> — what the apartments earn over that time if it isn’t spent.${v?' <b>Asset value</b> — what the apartments are worth today.':''} No interest, no inflation.`,
+  goalsTitle:'Goals in order', useAst:'Also put asset income toward goals', sellAst:'Sell the Ukraine apartments and invest',
+  goalRate:(r,h)=>`saving ${r} / mo · have ${h}`,
+  queueExplain:'Money goes to the first goal, then the second, and so on. Reorder with the arrows. The safety net isn’t spent; it stays set aside. After the rental is bought, its net cash flow is added to savings (or subtracted if negative).',
+  cushionItem:'Safety net', rentalItem:'Rental property (investment)', rentalItemSub:(p,m)=>`${p} · ${m}`, modeMortgage:'with a mortgage', modeCash:'all cash',
+  needLbl:'Need', addGoal:'+ Add goal', newGoal:'New goal',
+  never:'won’t get there', now:'ready now', inX:x=>`in ${x}`, ageAt:a=>`you’ll be ${a}`,
+  up:'Move up', down:'Move down', inQueue:'Include', del:'Delete', setup:'Set up', after:x=>`after purchase ${x} / mo to savings`,
+  rentalTitle:'Buying a property to rent out',
+  rentalIntro:'This is an investment: you buy a unit as an asset and rent it to tenants. See how much cash you need up front, whether rent covers the mortgage and all costs, and what return your money earns.',
+  rentalNote:'Enter the real market rent for this kind of unit — everything depends on it. Property tax and insurance vary a lot by state and county.',
+  fPrice:'Price, $', fDp:'Down payment, %', fClosing:'Closing costs, %', fRate:'Mortgage rate, %', fTerm:'Mortgage term, years',
+  fRent:'Rent, $ / mo', fTax:'Property tax, % / yr', fIns:'Insurance, $ / yr', fHoa:'HOA, $ / mo', fMaint:'Repairs, % of rent', fVac:'Vacancy, % of rent', fMgmt:'Management, % of rent',
+  withMortgage:'With a mortgage', allCash:'All cash', rRent:'Rent', rVac:'Vacancy', rMort:'Mortgage (principal + interest)', rTax:'Property tax', rIns:'Insurance', rHoa:'HOA',
+  rMaint:'Repairs', rMgmt:'Management', rCf:'Net cash flow per month', rCash:'Cash needed up front', rCoc:'Cash-on-cash return', rCap:'Cap rate', rBe:'Break-even rent',
+  vGood:'Pays for itself', vBad:x=>`You top up ${x} / mo`, useInGoals:'Use this in goals', inGoals:'used in goals',
+  wiTitle:'Stress test', wiExplain:'Check what happens if something goes wrong: tap an income or expense to switch it off, or enter how much earnings drop or expenses rise. The main model stays as it is.',
+  wiInc:'Income', wiExp:'Expenses', wiIncPct:'Earnings drop by, $ / mo (net)', wiExpPct:'Expenses rise by, $ / mo', wiAst:'Asset income', wiReset:'Reset scenario',
+  colNow:'Now', colScen:'Scenario', colDiff:'Change', wNet:'Net income / mo', wExp:'Expenses / mo', wSur:'Surplus / mo', wRate:'Saving toward goals / mo',
+  wCush:'Safety net lasts', wRun:'Savings last', wRunInf:'savings untouched', wGoals:'Goal dates', wTap:'Tap to switch off or on',
+  incomeTitle:'Income', earnings:'Earnings', assetsH:'Assets — separate, not in the budget', hNetAst:'Net / mo', expensesTitle:'Expenses', monthly:'Monthly', irregular:'Irregular, spread per month',
+  hSource:'Source', hGross:'Gross', hFreq:'How often', hTax:'Tax %', hNet:'Net / mo', hAsset:'Asset', hValue:'Value', hIncome:'Income', hPerMo:'Per month', hItem:'Item', hAmount:'Amount',
+  addIncome:'+ Add earnings', addAsset:'+ Add asset', addMonthly:'+ Add monthly expense', addIrregular:'+ Add irregular expense',
+  grossSmall:x=>`gross ${x}`, perYrSmall:x=>`${x} / yr`, yieldSmall:p=>`${p}% a year`,
+  freq:{w:'weekly',m:'monthly',q:'quarterly',h:'every 6 months',y:'yearly'}, name:'Name',
+  motTitle:'Motivation: what a bigger paycheck would do',
+  motIntro:'For each person: describe who you are now and how much more per month (before tax) you want to earn. Current pay and tax come from the Budget tab. Below: what it does for the family and concrete paths to grow.',
+  linkedTo:'Income line from Budget', extraLbl:'Extra earnings, $ / mo before tax',
+  nowGross:'Gross now', newGross:'Gross after raise', perYearAbbr:'/ yr', extraNet:x=>`+${x} / mo net`,
+  motResult:'What it does for the family', motSur:(a,b)=>`Surplus ${a} → ${b} per month`,
+  motGoals:'When you reach your goals', colRaise:'With the raise', colFaster:'Sooner by',
+  motSav:y=>`In ${y}`, rolesTitle:x=>`Roles paying ${x}+ a year`, rolesNote:'Pay ranges are rough US figures adjusted for New York; time is a typical time to make the move. The base list works offline; the AI button matches paths to any job from your description. A guide, not a promise.',
+  rolesNone:'These roles don’t usually pay that much. Try a smaller amount.', rolesHint:'Closest roles to this amount',
+  same:'same', rolesSec:'Where to grow to earn more',
+  salesTitle:'How much to sell', salesBaseTot:'whole new income', salesBaseExtra:'only the extra', commLbl:'My % of a deal',
+  sCnt:'Sales / mo', sEarn:'I earn per sale', sDeal:'Deal size', sNet:'Net / mo',
+  salesNote:(g,n)=>`To earn ${g} before tax = ${n} net per month`, salesHint:'“I earn per sale” is what you keep from one sale before tax. “Deal size” is what the client pays if you get the percentage above.',
+  vaultBtn:'🔒 My data', vaultPh:'Password', vaultOpen:'Open', vaultWrong:'Wrong password', vaultBusy:'Checking…', vaultCancel:'Cancel',
+  resetBtn:'Clear for someone else', resetAsk:'This erases income, assets, all expense amounts, goals, age, savings and the Motivation data. Expense item names and tax rates stay.',
+  resetYes:'Yes, clear it', resetNo:'Cancel', resetTip:'Export your data first so you can bring it back with Import.', partner:n=>`Partner ${n}`,
+  pName:'Name', whoNow:'Who I am now (job, what I do)', whoPh:'e.g. graphic designer, driver, accountant…', pField:'Field', autoDet:'detected automatically',
+  growFor:n=>`Paths for: ${n}`, growSub:(a,b,f)=>`Now ≈ ${a} / yr → goal ${b} / yr · ${f}`,
+  ptype:{up:'step up',shift:'easy shift',study:'upskill',switch:'career change',biz:'own business'},
+  pTime:m=>m<=1?'≈ 1 mo':m<12?`≈ ${m} mo`:`≈ ${Math.round(m/12*10)/10} yr`, pReach:'reaches the goal', pShort:x=>`${x} short of goal`,
+  aiBtn:'Match to me with AI', aiAgain:'Again', aiShowBase:'Base list', aiBusy:'AI is thinking…', aiLbl:'Matched by AI to your description:', aiFail:'AI didn’t answer, try later', aiDenied:'AI not allowed', becomes:'within reach',
+  gBuy:'Purchase', gRent:'Rent and running costs',
+  exportBtn:'Export', importBtn:'Import', importErr:'This file doesn’t look like a finance plan', autoSaved:'Saved automatically in this browser'
+}};
+const L=()=>T[S.lang]||T.uk;
+let STANDALONE=!(window.claude&&window.claude.use);
+const t=(k,...a)=>{const v=L()[k]!==undefined?L()[k]:T.uk[k];return typeof v==='function'?v(...a):v};
+
+/* ================= state ================= */
+const FREQN={w:52,m:12,q:4,h:2,y:1};
+const HORIZONS=[1,3,5,10,15,20,30];
+const DKEY='famplan-draft-v6', TKEY='famplan-tab2';
+const embedded=JSON.parse(document.getElementById('state').textContent);
+let S=JSON.parse(JSON.stringify(embedded));
+let dirty=false, art=null, saving=false, tab='budget';
+try{const d=JSON.parse(localStorage.getItem(DKEY)||'null');if(d&&d.base===embedded.savedAt&&d.state){S=d.state;dirty=true}}catch(e){}
+try{const tb=localStorage.getItem(TKEY);if(tb)tab=tb}catch(e){}
+const D=(k,v)=>{if(S[k]===undefined||S[k]===null)S[k]=v};
+D('lang','uk');D('age',32);D('startSavings',0);if(S.sandbox===undefined)S.sandbox=null;D('useAst',true);D('sellAst',false);D('showAstVal',false);
+D('cushion',{months:6});
+if(!S.rental){const h=S.house||{};S.rental={price:h.price||250000,dp:h.dp??25,closing:h.closing??3,rate:h.rate??7,term:30,rent:2000,taxPct:1.5,insYr:1500,hoa:250,maintPct:5,vacPct:5,mgmtPct:0,mode:'mortgage'}}
+if(!S.queue){S.queue=[{id:'q-cushion',type:'cushion',on:true},{id:'q-rental',type:'rental',on:true}].concat((S.goals||[]).map(g=>({id:g.id,type:'buy',name:g.name,price:g.price,on:true})))}
+D('whatif',{off:[],incDrop:0,expRise:0});
+if(S.whatif.incDrop===undefined){S.whatif.incDrop=0;S.whatif.expRise=0;delete S.whatif.incPct;delete S.whatif.expPct}
+S.assets.forEach(a=>{if(a.tax===undefined)a.tax=10});
+if(!S.queue.some(q=>q.id==='g-gc'))S.queue.splice(1,0,{id:'g-gc',type:'buy',name:'Грін-карта',price:20000,on:true});
+D('motiv',{p1:{inc:(S.incomes[0]||{}).id,extra:2000},p2:{inc:(S.incomes[1]||{}).id,extra:1000}});
+[['p1','Ігор','Revenue Automation Engineer: маркетинг, реклама, CRM-автоматизація','marketing'],['p2','Катя','Графічний дизайнер','design']].forEach(([k,n,r,f])=>{const p=S.motiv[k];if(!p)return;if(p.name===undefined)p.name=n;if(p.role===undefined)p.role=r;if(!p.fam)p.fam=f});
+delete S.house; delete S.goals;
+if(!T[S.lang])S.lang='uk';
+if(!T.uk.tabs[tab])tab='budget';
+
+/* ================= math ================= */
+const num=v=>{const x=parseFloat(String(v).replace(/\s/g,'').replace(',','.'));return isFinite(x)?x:0};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const fmtN=v=>new Intl.NumberFormat(S.lang==='en'?'en-US':'uk-UA',{maximumFractionDigits:0}).format(v);
+const money=v=>(v<-0.5?'−':'')+S.cur+fmtN(Math.abs(Math.round(v)));
+const signed=v=>(v>0.5?'+':'')+money(v);
+const pct1=v=>(v<-0.05?'−':'')+(Math.round(Math.abs(v)*10)/10).toString().replace('.',S.lang==='en'?'.':',');
+const per=it=>FREQN[it.freq]||12;
+const irregular=it=>['q','h','y'].includes(it.freq);
+const moExp=e=>(+e.amount||0)*per(e)/12;
+const moIncG=i=>(+i.amount||0)*per(i)/12;
+const moIncN=i=>moIncG(i)*(1-(+i.tax||0)/100);
+const moAstG=a=>(+a.income||0)*per(a)/12;
+const moAst=a=>moAstG(a)*(1-(+a.tax||0)/100);
+const sum=(arr,f)=>arr.reduce((s,x)=>s+f(x),0);
+const whenStr=m=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()+m);return t('monthNames')[d.getMonth()]+' '+d.getFullYear()};
+const dur=m=>t('dur',Math.floor(m/12),m%12);
+
+function calc(sc,mot){ // sc: stress test, mot: motivation raises
+  const off=sc?new Set(S.whatif.off):new Set();
+  const incs=S.incomes.filter(i=>!off.has(i.id)), exps=S.expenses.filter(e=>!off.has(e.id));
+  let gross=sum(incs,moIncG), net=sum(incs,moIncN);
+  if(sc){net-=(+S.whatif.incDrop||0);gross-=(+S.whatif.incDrop||0)}
+  if(mot){['p1','p2'].forEach(k=>{const p=S.motiv[k],x=+p.extra||0,inc=S.incomes.find(i=>i.id===p.inc);gross+=x;net+=x*(1-((inc?+inc.tax:30)||0)/100)})}
+  const stable=sum(exps.filter(e=>!irregular(e)),moExp)+(sc?(+S.whatif.expRise||0):0), irr=sum(exps.filter(irregular),moExp);
+  const exp=stable+irr;
+  const astInc=off.has('ast')?0:sum(S.assets,moAst);
+  return {gross,net,tax:gross-net,stable,irr,exp,sur:net-exp,astInc,astValue:sum(S.assets,a=>+a.value||0)};
+}
+const savingRate=c=>(S.sandbox!==null&&S.sandbox!==undefined?+S.sandbox:Math.round(c.sur));
+function rentalCalc(){
+  const R=S.rental, price=+R.price||0, rent=+R.rent||0;
+  const closing=price*(+R.closing||0)/100, loan=price*(1-(+R.dp||0)/100);
+  const r=(+R.rate||0)/1200, n=Math.max(1,(+R.term||30)*12);
+  const pi=loan>0?(r>0?loan*r/(1-Math.pow(1+r,-n)):loan/n):0;
+  const vac=rent*(+R.vacPct||0)/100, tax=price*(+R.taxPct||0)/100/12, ins=(+R.insYr||0)/12, hoa=+R.hoa||0;
+  const maint=rent*(+R.maintPct||0)/100, mgmt=rent*(+R.mgmtPct||0)/100;
+  const noi=rent-vac-tax-ins-hoa-maint-mgmt;
+  const share=1-((+R.vacPct||0)+(+R.maintPct||0)+(+R.mgmtPct||0))/100;
+  const fixed=tax+ins+hoa;
+  const mk=(mortgage)=>{const cf=noi-(mortgage?pi:0), cash=mortgage?price*(+R.dp||0)/100+closing:price+closing;
+    return {mortgage,cf,cash,coc:cash>0?cf*12/cash*100:0,be:share>0?(fixed+(mortgage?pi:0))/share:0,loan:mortgage?loan:0,pi:mortgage?pi:0}};
+  return {rent,vac,tax,ins,hoa,maint,mgmt,noi,cap:price>0?noi*12/price*100:0,m:mk(true),c:mk(false)};
+}
+function queueItems(c){
+  const rc=rentalCalc(), mode=S.rental.mode==='cash'?rc.c:rc.m;
+  return S.queue.filter(q=>q.on).map(q=>{
+    if(q.type==='cushion')return {q,need:Math.max(0,(+S.cushion.months||0)*c.exp),cf:0};
+    if(q.type==='rental')return {q,need:mode.cash,cf:mode.cf};
+    return {q,need:+q.price||0,cf:0};
+  });
+}
+function runQueue(items,rate,have){
+  let free=have,cf=0,idx=0;const res=items.map(()=>null);
+  for(let m=0;m<=720&&idx<items.length;m++){
+    if(m>0)free+=rate+cf;
+    while(idx<items.length&&free>=items[idx].need-0.5){free-=items[idx].need;cf+=items[idx].cf;res[idx]=m;idx++}
+    if(m>24&&rate+cf<=0&&idx<items.length&&free<items[idx].need)break;
+  }
+  return res;
+}
+const goalsHave=c=>(+S.startSavings||0)+(S.sellAst?c.astValue:0);
+const goalsRate=(c,base)=>(base!==undefined?base:savingRate(c))+(S.useAst?c.astInc:0);
+const itemName=q=>q.type==='cushion'?t('cushionItem'):q.type==='rental'?t('rentalItem'):(q.name||t('newGoal'));
+
+/* ================= render: shell ================= */
+const inpB=(list,it,f,label,n,cls)=>`<input class="${n?'n':''} ${cls||''}"${n?' inputmode="decimal" data-t="n"':''} data-l="${list}" data-id="${it.id}" data-f="${f}" value="${esc(it[f])}" aria-label="${esc(label)}" title="${esc(label)}">`;
+const inpP=(path,f,label,id)=>`<input class="n" inputmode="decimal" data-t="n" data-p="${path}" data-f="${f}"${id?` id="${id}"`:''} value="${esc(path?S[path][f]:S[f])}" aria-label="${esc(label)}">`;
+const delBtn=(list,it)=>`<button class="del c-del" data-act="del" data-l="${list}" data-id="${it.id}" aria-label="${t('del')}" title="${t('del')}">×</button>`;
+const freqSel=(list,it)=>`<select data-l="${list}" data-id="${it.id}" data-f="freq" aria-label="${t('hFreq')}">${Object.entries(t('freq')).map(([k,v])=>`<option value="${k}"${it.freq===k?' selected':''}>${v}</option>`).join('')}</select>`;
+
+function renderAll(){
+  document.documentElement.lang=S.lang==='en'?'en':'uk';
+  document.title=t('title');
+  const tabs=Object.entries(t('tabs')).map(([k,v])=>`<button class="tab${tab===k?' on':''}" data-act="tab" data-k="${k}" data-c="${TABC[k]}" role="tab" aria-selected="${tab===k}"><span class="tdot"></span>${v}</button>`).join('');
+  document.getElementById('app').innerHTML=`<div class="wrap">
+    <header><h1>${t('title')}</h1>
+      <div class="hright"><span class="status" id="status"></span>
+        <div class="seg" role="group" aria-label="Language"><button data-act="lang" data-k="uk" class="${S.lang==='uk'?'on':''}">УКР</button><button data-act="lang" data-k="en" class="${S.lang==='en'?'on':''}">ENG</button></div>
+        ${STANDALONE?`<span class="hbtns"><button class="small" data-act="export">${t('exportBtn')}</button>${VAULT?`<button class="small" data-act="vault">${t('vaultBtn')}</button>`:`<button class="small" data-act="import">${t('importBtn')}</button>`}<input type="file" id="impfile" accept="application/json,.json" hidden></span>`:''}
+        <button class="primary" data-act="save" id="savebtn">${t('save')}</button></div></header>
+    ${vaultAsk?`<form class="resetbar" id="vaultform" style="background:var(--accent-soft);border-color:var(--accent)"><div class="row2"><input type="password" id="vaultpw" placeholder="${t('vaultPh')}" autocomplete="current-password" style="max-width:200px"><button class="primary" type="submit">${t('vaultOpen')}</button><button type="button" data-act="vaultno">${t('vaultCancel')}</button><span class="note" id="vaultmsg"></span></div></form>`:''}
+    <div class="nav"><div class="tabs" role="tablist">${tabs}</div><div class="mini" id="mini"></div></div>
+    ${({overview:vOverview,goals:vGoals,rental:vRental,whatif:vWhatif,budget:vBudget,motiv:vMotiv})[tab]()}
+  </div>`;
+  renderCalc(); renderStatus();
+}
+
+const TABC={budget:'inc',overview:'acc',goals:'acc',rental:'teal',whatif:'warn',motiv:'mot'};
+/* ---------- overview ---------- */
+function vOverview(){return `
+  <section aria-label="${t('tabs').overview}" data-c="acc">
+    <div class="flow" id="flow"></div>
+    <div class="assetline" id="assetline"></div>
+  </section>
+  <div class="duo">
+    <section data-c="warn"><div class="cardhead"><h2>${t('cushionTitle')}</h2><span id="cush-pill"></span></div>
+      <div id="cush"></div>
+      <label class="inline">${t('cushionTargetLbl')} ${inpP('cushion','months',t('cushionTargetLbl'))}</label>
+      <p class="explain">${t('cushionExplain')}</p></section>
+    <section data-c="acc"><div class="cardhead"><h2>${t('nextGoal')}</h2><button class="linkbtn" data-act="tab" data-k="goals">${t('tabs').goals} →</button></div>
+      <div id="nextgoal"></div></section>
+  </div>
+  <section data-c="acc">
+    <div class="sechead"><h2>${t('savTitle')}</h2><span class="note" id="sb-note"></span></div>
+    <div class="controls">
+      <label>${t('saveMo')}, ${esc(S.cur)}
+        <div class="slide"><input type="range" id="sb-range" min="0" max="5000" step="50" aria-label="${t('saveMo')}"><input class="n" id="sb-num" inputmode="decimal" aria-label="${t('saveMo')}"><button class="small" data-act="sbreset" id="sb-reset">${t('asNow')}</button></div></label>
+      <label>${t('alreadySaved')}, ${esc(S.cur)}${inpP('','startSavings',t('alreadySaved'))}</label>
+      <label>${t('myAge')}${inpP('','age',t('myAge'))}</label>
+    </div>
+    <div class="checks"><label><input type="checkbox" id="c-showAstVal"${S.showAstVal?' checked':''}> ${t('showAstVal')}</label></div>
+    <div class="tablewrap"><table class="wide"><thead id="sav-head"></thead><tbody id="horizons"></tbody></table></div>
+    <p class="explain" id="sav-explain"></p>
+  </section>`}
+
+/* ---------- goals ---------- */
+function vGoals(){return `
+  <section data-c="acc">
+    <div class="sechead"><h2>${t('goalsTitle')}</h2><span class="note" id="goal-rate"></span></div>
+    <div class="checks">
+      <label><input type="checkbox" id="c-useAst"${S.useAst?' checked':''}> ${t('useAst')}</label>
+      <label><input type="checkbox" id="c-sellAst"${S.sellAst?' checked':''}> ${t('sellAst')}</label>
+    </div>
+    <div class="queue">${S.queue.map((q,i)=>`
+      <div class="qi${q.on?'':' off'}" id="qi-${q.id}">
+        <div class="qn" id="qn-${q.id}">${i+1}</div>
+        <div class="qbody">
+          <div class="qtop">${q.type==='buy'
+            ?`${inpB('queue',q,'name',t('name'),0,'gname')}<span class="note">${t('needLbl')}</span>${inpB('queue',q,'price',t('needLbl'),1)}`
+            :`<span class="qname">${itemName(q)}</span><span class="note" id="qneed-${q.id}"></span><button class="linkbtn" data-act="tab" data-k="${q.type==='rental'?'rental':'overview'}">${t('setup')}</button>`}</div>
+          <div id="qres-${q.id}"></div>
+        </div>
+        <div class="qctl">
+          <button class="ico" data-act="qup" data-id="${q.id}" aria-label="${t('up')}" title="${t('up')}"${i===0?' disabled':''}>↑</button>
+          <button class="ico" data-act="qdown" data-id="${q.id}" aria-label="${t('down')}" title="${t('down')}"${i===S.queue.length-1?' disabled':''}>↓</button>
+          <label title="${t('inQueue')}"><input type="checkbox" data-act="qon" data-id="${q.id}"${q.on?' checked':''} aria-label="${t('inQueue')}"></label>
+          ${q.type==='buy'?delBtn('queue',q):''}
+        </div>
+      </div>`).join('')}</div>
+    <div><button class="add" data-act="add" data-l="queue">${t('addGoal')}</button></div>
+    <p class="explain">${t('queueExplain')}</p>
+  </section>`}
+
+/* ---------- rental ---------- */
+function vRental(){const R=S.rental,f=(k,l)=>`<label>${l}${inpP('rental',k,l)}</label>`;return `
+  <section data-c="teal">
+    <div class="sechead"><h2>${t('rentalTitle')}</h2></div>
+    <p class="explain" style="color:var(--fg)">${t('rentalIntro')}</p>
+    <div class="fgroup"><h3>${t('gBuy')}</h3><div class="fields">${f('price',t('fPrice'))}${f('dp',t('fDp'))}${f('closing',t('fClosing'))}${f('rate',t('fRate'))}${f('term',t('fTerm'))}</div></div>
+    <div class="fgroup"><h3>${t('gRent')}</h3><div class="fields">${f('rent',t('fRent'))}${f('vacPct',t('fVac'))}${f('taxPct',t('fTax'))}${f('insYr',t('fIns'))}${f('hoa',t('fHoa'))}${f('maintPct',t('fMaint'))}${f('mgmtPct',t('fMgmt'))}</div></div>
+    <p class="explain">${t('rentalNote')}</p>
+    <div class="duo" id="rental-res"></div>
+  </section>`}
+
+/* ---------- what-if ---------- */
+function vWhatif(){const off=new Set(S.whatif.off);
+  const chip=(id,label,amt,cls)=>`<button class="chip ${cls}${off.has(id)?' off':''}" data-act="wtoggle" data-id="${id}" aria-pressed="${!off.has(id)}">${esc(label)} <small>${amt}</small></button>`;
+  return `
+  <section data-c="warn">
+    <div class="sechead"><h2>${t('wiTitle')}</h2><button class="small" data-act="wreset">${t('wiReset')}</button></div>
+    <p class="explain">${t('wiExplain')}</p>
+    <h3>${t('wiInc')}</h3>
+    <div class="chips">${S.incomes.map(i=>chip(i.id,i.name||t('name'),money(moIncN(i)),'inc')).join('')}${S.assets.length?chip('ast',t('wiAst'),money(sum(S.assets,moAst)),'inc'):''}</div>
+    <h3>${t('wiExp')}</h3>
+    <div class="chips">${[...S.expenses].sort((a,b)=>moExp(b)-moExp(a)).map(e=>chip(e.id,e.name||t('name'),money(moExp(e)),'exp')).join('')}</div>
+    <div class="fields"><label>${t('wiIncPct')}${inpP('whatif','incDrop',t('wiIncPct'))}</label><label>${t('wiExpPct')}${inpP('whatif','expRise',t('wiExpPct'))}</label></div>
+    <div class="tablewrap"><table id="wi-table"></table></div>
+  </section>`}
+
+/* ---------- budget ---------- */
+function vBudget(){
+  const stable=S.expenses.filter(e=>!irregular(e)), irr=S.expenses.filter(irregular);
+  const expHead=`<div class="row exp head"><div>${t('hItem')}</div><div class="r">${t('hAmount')}</div><div>${t('hFreq')}</div><div class="r">${t('hPerMo')}</div><div></div></div>`;
+  const cell=(lbl,h,cls)=>`<label class="cell ${cls}"><span class="ml">${lbl}</span>${h}</label>`;
+  const rowInc=i=>`<div class="row inc"><div class="c-name">${inpB('incomes',i,'name',t('name'))}</div>${cell(t('hGross'),inpB('incomes',i,'amount',t('hGross'),1),'c-amt')}${cell(t('hFreq'),freqSel('incomes',i),'c-freq')}${cell(t('hTax'),inpB('incomes',i,'tax',t('hTax'),1),'c-tax')}<div class="mo c-mo" data-mo="${i.id}"></div>${delBtn('incomes',i)}</div>`;
+  const rowAst=a=>`<div class="row ast"><div class="c-name">${inpB('assets',a,'name',t('name'))}</div>${cell(t('hValue'),inpB('assets',a,'value',t('hValue'),1),'c-val')}${cell(t('hIncome'),inpB('assets',a,'income',t('hIncome'),1),'c-amt')}${cell(t('hFreq'),freqSel('assets',a),'c-freq')}${cell(t('hTax'),inpB('assets',a,'tax',t('hTax'),1),'c-tax')}<div class="mo c-mo" data-mo="${a.id}"></div>${delBtn('assets',a)}</div>`;
+  const rowExp=e=>`<div class="row exp"><div class="c-name">${inpB('expenses',e,'name',t('name'))}</div>${cell(t('hAmount'),inpB('expenses',e,'amount',t('hAmount'),1),'c-amt')}${cell(t('hFreq'),freqSel('expenses',e),'c-freq')}<div class="mo c-mo" data-mo="${e.id}"></div>${delBtn('expenses',e)}</div>`;
+  return `
+  ${resetAsk?`<div class="resetbar"><b>${t('resetAsk')}</b><span class="note">${t('resetTip')}</span><div class="row2"><button class="danger" data-act="resetyes">${t('resetYes')}</button><button data-act="resetno">${t('resetNo')}</button></div></div>`
+    :`<div style="display:flex;justify-content:flex-end"><button class="small" data-act="reset">↺ ${t('resetBtn')}</button></div>`}
+  <section data-c="inc"><div class="sechead"><h2>${t('incomeTitle')}</h2><div class="sum" id="sum-inc"></div></div>
+    <h3>${t('earnings')}</h3>
+    <div class="rows"><div class="row inc head"><div>${t('hSource')}</div><div class="r">${t('hGross')}</div><div>${t('hFreq')}</div><div class="r">${t('hTax')}</div><div class="r">${t('hNet')}</div><div></div></div>${S.incomes.map(rowInc).join('')}</div>
+    <div><button class="add" data-act="add" data-l="incomes">${t('addIncome')}</button></div>
+    <h3>${t('assetsH')} <span id="sum-ast"></span></h3>
+    <div class="rows"><div class="row ast head"><div>${t('hAsset')}</div><div class="r">${t('hValue')}</div><div class="r">${t('hIncome')}</div><div>${t('hFreq')}</div><div class="r">${t('hTax')}</div><div class="r">${t('hNetAst')}</div><div></div></div>${S.assets.map(rowAst).join('')}</div>
+    <div><button class="add" data-act="add" data-l="assets">${t('addAsset')}</button></div>
+  </section>
+  <section data-c="exp"><div class="sechead"><h2>${t('expensesTitle')}</h2><div class="sum" id="sum-exp"></div></div>
+    <h3>${t('monthly')} <span id="sum-stable"></span></h3>
+    <div class="rows">${expHead}${stable.map(rowExp).join('')}</div>
+    <div><button class="add" data-act="add" data-l="expenses" data-k="m">${t('addMonthly')}</button></div>
+    <h3>${t('irregular')} <span id="sum-irr"></span></h3>
+    <div class="rows">${expHead}${irr.map(rowExp).join('')}</div>
+    <div><button class="add" data-act="add" data-l="expenses" data-k="y">${t('addIrregular')}</button></div>
+  </section>`}
+
+
+/* ---------- motivation ---------- */
+/* Career paths by field: [uk, en, type, pay low $k, pay high $k, months to get there]
+   type: up = step up in the same role, shift = easy shift to an adjacent role, study = upskill / certificate,
+   switch = full career change, biz = own business / freelance */
+const FAM={
+ marketing:{uk:'Маркетинг, реклама, CRM-автоматизація',en:'Marketing, ads, CRM automation',kw:['маркет','market','реклам','ads','smm','crm','автоматиз','automation','growth','seo','ppc','revenue','gohighlevel','hubspot','лід','lead gen','digital'],
+  p:[['Senior / Lead маркетинг-автоматизації','Senior marketing automation manager','up',105,145,6],
+   ['RevOps-менеджер (Revenue Operations)','Revenue operations manager','shift',115,165,6],
+   ['AI-automation інженер (LLM-процеси)','AI automation engineer','study',120,180,9],
+   ['Консультант Salesforce / HubSpot (сертифікат)','Salesforce / HubSpot consultant','study',100,150,6],
+   ['Solutions engineer / пресейл','Solutions engineer','shift',120,180,9],
+   ['Product marketing manager','Product marketing manager','shift',115,165,9],
+   ['Head of Growth / директор з маркетингу','Head of growth / marketing director','up',140,210,24],
+   ['Analytics engineer (SQL, dbt)','Analytics engineer','study',110,155,12],
+   ['Власна агенція автоматизації','Own automation agency','biz',80,300,12],
+   ['Fractional CMO / консультант','Fractional CMO / consultant','biz',100,250,12],
+   ['Лід платної реклами (PPC)','Paid media lead','up',85,125,6]]},
+ design:{uk:'Графічний дизайн, бренд, візуал',en:'Graphic design, brand, visual',kw:['дизайн','design','графіч','graphic','ілюстр','illustr','бренд','brand','figma','photoshop','верст','art','арт'],
+  p:[['Senior графічний дизайнер','Senior graphic designer','up',70,95,12],
+   ['Бренд-дизайнер','Brand designer','shift',75,110,6],
+   ['UX/UI-дизайнер','UX/UI designer','study',85,125,9],
+   ['Product designer','Product designer','study',110,160,18],
+   ['Motion-дизайнер','Motion designer','study',75,115,6],
+   ['Веб-дизайнер + Webflow','Web designer + Webflow','study',75,115,6],
+   ['Арт-директор','Art director','up',100,145,36],
+   ['Дизайн презентацій і пітч-деків (фриланс)','Presentation & pitch deck design (freelance)','biz',60,150,3],
+   ['Дизайнер упаковки','Packaging designer','shift',65,95,6],
+   ['Власна дизайн-студія','Own design studio','biz',70,250,12],
+   ['Креативний директор','Creative director','up',140,200,60]]},
+ software:{uk:'Розробка, IT, тестування',en:'Software, IT, QA',kw:['розроб','програм','develop','engineer','software','frontend','backend','devops','qa','тестув','it ','айті','код','code'],
+  p:[['Senior розробник','Senior software engineer','up',140,190,12],
+   ['Tech lead / архітектор','Tech lead / architect','up',165,230,24],
+   ['Engineering manager','Engineering manager','up',170,240,24],
+   ['ML / AI-інженер','ML / AI engineer','study',150,220,12],
+   ['DevOps / Cloud (сертифікат AWS)','DevOps / cloud engineer','study',130,180,9],
+   ['Інженер з кібербезпеки','Security engineer','study',130,185,12],
+   ['Solutions architect','Solutions architect','shift',150,210,12],
+   ['Product manager','Product manager','shift',130,190,12],
+   ['Контрактор / фриланс','Contractor / freelance','biz',120,250,6],
+   ['Власний SaaS-продукт','Own SaaS product','biz',50,500,24]]},
+ sales:{uk:'Продажі, робота з клієнтами',en:'Sales, account management',kw:['продаж','sales','account','бізнес-розвит','bdr','sdr','клієнт','client'],
+  p:[['Senior account executive','Senior account executive','up',100,180,12],
+   ['Enterprise account executive','Enterprise account executive','up',150,280,24],
+   ['Sales manager','Sales manager','up',120,190,24],
+   ['Технічні продажі (SaaS)','SaaS sales','shift',100,200,6],
+   ['Партнерства / BD-менеджер','Partnerships manager','shift',110,170,9],
+   ['Customer success manager','Customer success manager','shift',80,130,6],
+   ['Продажі медичного обладнання','Medical device sales','switch',100,200,12],
+   ['Агент з нерухомості','Real estate agent','study',50,200,6],
+   ['Страховий брокер (ліцензія)','Insurance broker','study',60,150,4],
+   ['Власний дистриб’юторський бізнес','Own distribution business','biz',60,300,12]]},
+ finance:{uk:'Бухгалтерія, фінанси',en:'Accounting, finance',kw:['бухгалт','account','фінанс','finance','bookkeep','аудит','audit','tax','податк'],
+  p:[['Senior бухгалтер','Senior accountant','up',80,105,12],
+   ['CPA (сертифікат)','CPA','study',90,140,18],
+   ['Фінансовий аналітик (FP&A)','FP&A analyst','shift',85,125,9],
+   ['Аудитор','Auditor','shift',80,120,12],
+   ['Controller','Controller','up',120,180,36],
+   ['Податковий спеціаліст / EA','Tax specialist / enrolled agent','study',70,120,9],
+   ['Фінансовий радник (CFP)','Financial advisor (CFP)','study',80,180,18],
+   ['Фінансовий менеджер','Financial manager','up',130,190,48],
+   ['Fractional CFO','Fractional CFO','biz',120,250,24],
+   ['Власна бухгалтерська практика','Own bookkeeping practice','biz',60,180,12]]},
+ admin:{uk:'Асистент, адміністрування, операції',en:'Assistant, admin, operations',kw:['асист','assistant','адмін','admin','офіс','office','operations','координат','coordinator','ops'],
+  p:[['Executive assistant (C-level)','Executive assistant (C-level)','up',75,110,6],
+   ['Operations manager','Operations manager','shift',85,130,12],
+   ['Project manager (PMP)','Project manager (PMP)','study',90,135,9],
+   ['Chief of staff','Chief of staff','up',120,190,24],
+   ['HR-генераліст / рекрутер','HR generalist / recruiter','shift',65,100,6],
+   ['Закупівлі (procurement)','Procurement specialist','shift',70,105,6],
+   ['Paralegal (сертифікат)','Paralegal','study',55,85,9],
+   ['Office manager','Office manager','up',60,85,6],
+   ['Агенція віртуальних асистентів','Virtual assistant agency','biz',50,200,6],
+   ['Організатор подій','Event planner','biz',50,150,6]]},
+ health:{uk:'Медицина, догляд',en:'Healthcare, care',kw:['медсестр','nurse','медиц','medical','health','лікар','стомат','dental','фарм','pharma','догляд','care'],
+  p:[['Тревел-медсестра','Travel nurse','shift',110,180,6],
+   ['Менеджер медичного закладу','Health services manager','up',100,150,24],
+   ['Nurse practitioner','Nurse practitioner','study',120,150,36],
+   ['RN (зареєстрована медсестра)','Registered nurse','study',85,120,24],
+   ['Dental hygienist','Dental hygienist','study',85,105,24],
+   ['Радіологічний технолог','Radiologic technologist','study',65,95,24],
+   ['Медичний кодувальник (сертифікат)','Medical coder','study',50,75,6],
+   ['Асистент фізіотерапевта','PT assistant','study',60,80,24],
+   ['Фарм-продажі','Pharmaceutical sales','switch',90,160,12],
+   ['Власна home-care агенція','Own home care agency','biz',70,300,18]]},
+ trades:{uk:'Будівництво, ремонт, ремесла',en:'Construction, renovation, trades',kw:['будів','construct','електрик','electric','сантех','plumb','монтаж','ремонт','handyman','hvac','тесл','carpent','столяр','сход','stair','remodel'],
+  p:[['Кошторисник (estimator)','Estimator','shift',75,115,6],
+   ['Проджект-менеджер ремонтів','Renovation project manager','shift',80,120,6],
+   ['Прораб / site supervisor','Site supervisor','up',75,115,12],
+   ['Ліцензований майстер (electrician / plumber)','Master electrician / plumber','up',75,120,24],
+   ['Менеджер будівництва','Construction manager','up',100,160,36],
+   ['HVAC-технік (EPA)','HVAC technician','study',55,90,9],
+   ['Будівельний інспектор','Building inspector','study',65,95,12],
+   ['Монтажник ліфтів','Elevator installer','study',90,130,48],
+   ['Бригадир сонячних панелей','Solar installer lead','shift',55,85,3],
+   ['Власна ремонтна компанія','Own contracting company','biz',80,350,12]]},
+ education:{uk:'Освіта, навчання',en:'Education, teaching',kw:['вчител','учител','teacher','освіт','educat','викладач','tutor','репетит'],
+  p:[['Instructional designer','Instructional designer','shift',75,110,6],
+   ['Корпоративний тренер (L&D)','Corporate trainer','shift',70,110,6],
+   ['Curriculum developer','Curriculum developer','shift',70,100,9],
+   ['EdTech customer success','EdTech customer success','shift',70,105,6],
+   ['Lead teacher (магістр)','Lead teacher (master’s)','up',70,100,24],
+   ['Адміністратор школи','School administrator','up',100,140,36],
+   ['UX researcher','UX researcher','study',100,145,12],
+   ['Спецпедагог','Special education teacher','study',65,95,12],
+   ['Шкільний консультант','School counselor','study',65,95,24],
+   ['Онлайн-курси / репетиторство','Online courses / tutoring','biz',40,200,6]]},
+ service:{uk:'Сервіс, ритейл, підтримка клієнтів',en:'Service, retail, customer support',kw:['офіціант','waiter','бармен','ресторан','restaurant','retail','магазин','продавец','касир','cashier','support','підтримк','готел','hotel','кав'],
+  p:[['Customer success manager','Customer success manager','shift',70,110,6],
+   ['Sales development rep (SaaS)','Sales development rep','shift',60,90,3],
+   ['Менеджер ресторану / магазину','Restaurant / store manager','up',55,85,12],
+   ['Менеджер готелю','Hotel manager','up',60,95,24],
+   ['IT-підтримка (CompTIA)','IT support (CompTIA)','study',50,75,4],
+   ['Агент з нерухомості','Real estate agent','study',50,150,6],
+   ['Фітнес-тренер','Personal trainer','study',45,90,4],
+   ['Лінійний електромонтер','Utility line worker','switch',80,120,12],
+   ['Електрик / HVAC (апрентіс)','Electrician / HVAC apprentice','switch',55,95,24],
+   ['Власна кав’ярня / кейтеринг','Own café / catering','biz',40,200,12]]},
+ languages:{uk:'Мови, переклад, тексти',en:'Languages, translation, writing',kw:['перекл','translat','interpret','лінгв','linguist','копірайт','copywrit','writer','редактор'],
+  p:[['Судовий / медичний перекладач (сертифікат)','Certified court / medical interpreter','study',60,100,6],
+   ['Локалізаційний менеджер','Localization manager','shift',90,140,12],
+   ['Technical writer','Technical writer','shift',75,115,6],
+   ['Контент-маркетолог','Content marketer','shift',65,105,6],
+   ['UX writer','UX writer','study',100,150,9],
+   ['AI-дані / оцінка мовних моделей','AI data specialist','shift',50,100,1],
+   ['Багатомовний customer success','Multilingual customer success','shift',65,100,3],
+   ['Копірайтер (фриланс)','Freelance copywriter','biz',40,150,3],
+   ['Власне бюро перекладів','Own translation agency','biz',50,200,12],
+   ['Онлайн-викладач мов','Online language tutor','biz',30,90,1]]},
+ logistics:{uk:'Логістика, водіння, склад',en:'Logistics, driving, warehouse',kw:['водій','driver','кур','courier','склад','warehouse','логіст','logist','далекобій','truck','доставк','delivery','uber'],
+  p:[['Диспетчер вантажів','Freight dispatcher','shift',50,80,1],
+   ['Freight broker','Freight broker','shift',50,150,3],
+   ['CDL-водій (далекобій)','CDL truck driver','study',60,95,2],
+   ['Менеджер складу','Warehouse manager','up',60,95,12],
+   ['Транспортний менеджер','Transportation manager','up',80,120,24],
+   ['Supply chain аналітик','Supply chain analyst','study',65,100,9],
+   ['Кранівник','Crane operator','study',60,100,6],
+   ['Комерційний пілот','Commercial pilot','switch',90,250,24],
+   ['Owner-operator (своя вантажівка)','Owner-operator','biz',80,200,12],
+   ['Власна диспетчерська компанія','Own dispatch company','biz',50,200,6]]},
+ other:{uk:'Інше / не знаю',en:'Other / not sure',kw:[],
+  p:[['Project manager (PMP)','Project manager (PMP)','study',90,135,9],
+   ['Customer success manager','Customer success manager','shift',70,110,6],
+   ['Sales development rep (SaaS)','Sales development rep','shift',60,90,3],
+   ['Data analyst (SQL, Excel)','Data analyst','study',75,110,9],
+   ['UX/UI-дизайнер','UX/UI designer','study',85,125,9],
+   ['Агент з нерухомості','Real estate agent','study',50,150,6],
+   ['RN (зареєстрована медсестра)','Registered nurse','switch',85,120,24],
+   ['Електрик (апрентіс → ліцензія)','Electrician (apprentice → license)','switch',60,100,48],
+   ['CDL-водій','CDL truck driver','study',60,95,2],
+   ['Власний сервісний бізнес','Own service business','biz',50,250,12]]}
+};
+const PTYPES=['up','shift','study','biz','switch'];
+const PCOL={up:'good',shift:'acc',study:'mid',switch:'bad',biz:'mot'};
+function detectFam(text){
+  const s=' '+String(text||'').toLowerCase()+' ';let best='other',score=0;
+  for(const [k,f] of Object.entries(FAM)){const sc=f.kw.reduce((n,w)=>n+(s.includes(w)?1:0),0);if(sc>score){score=sc;best=k}}
+  return best;
+}
+function personIncome(k){const p=S.motiv[k], inc=S.incomes.find(i=>i.id===p.inc);
+  const nowG=inc?moIncG(inc):0, x=+p.extra||0, tax=inc?(+inc.tax||0):30;
+  return {inc,nowG,newG:nowG+x,x,tax,target:(nowG+x)*12};
+}
+function pathsFor(k){
+  const p=S.motiv[k], {target,nowG}=personIncome(k);
+  const list=(FAM[p.fam]||FAM.other).p.map(r=>({uk:r[0],en:r[1],type:r[2],low:r[3]*1000,high:r[4]*1000,months:r[5]}))
+    .filter(o=>o.high>nowG*12);
+  const effort=o=>PTYPES.indexOf(o.type)*6+o.months/4;
+  list.sort((a,b)=>{const ra=a.high>=target, rb=b.high>=target; if(ra!==rb)return ra?-1:1; return effort(a)-effort(b)||b.high-a.high});
+  return list.slice(0,10);
+}
+const kFmt=v=>S.cur+fmtN(Math.round(v/1000))+'k';
+function pathRow(o,i,target){
+  const name=S.lang==='en'?(o.en||o.name):(o.uk||o.name);
+  const ok=o.high>=target;
+  return `<div class="role">
+    <span class="rn">${i+1}</span>
+    <span class="rt">${esc(name)}<small><span class="pill ${PCOL[o.type]||'acc'}">${t('ptype')[o.type]||esc(o.type)}</span> · ${t('pTime',o.months)}${o.note?' · '+esc(o.note):''}</small></span>
+    <span class="rs">${kFmt(o.low)}–${kFmt(o.high)}<small class="${ok?'posc':''}">${ok?t('pReach'):t('pShort',kFmt(target-o.high))}</small></span>
+  </div>`;
+}
+let sampleFn=null, aiBusy={}, resetAsk=false, vaultAsk=false;
+const VAULT=(()=>{try{const el=document.getElementById('vault');return el?JSON.parse(el.textContent):null}catch(e){return null}})();
+async function unlockVault(pw){
+  const b=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0)), enc=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b(VAULT.s),iterations:VAULT.n,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b(VAULT.i)},key,b(VAULT.c));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function resetPlan(){
+  S.incomes=(S.incomes.length?S.incomes:[{id:uid(),tax:30},{id:uid(),tax:25}]).map((i,n)=>({id:i.id,name:t('partner',n+1),amount:0,freq:'m',tax:i.tax??30}));
+  S.assets=[];
+  S.expenses=S.expenses.map(e=>({id:e.id,name:e.name,amount:0,freq:e.freq}));
+  S.startSavings=0;S.age=0;S.sandbox=null;S.useAst=true;S.sellAst=false;S.showAstVal=false;
+  S.cushion={months:6};
+  S.rental={price:300000,dp:25,closing:3,rate:7,term:30,rent:2200,taxPct:(S.rental&&S.rental.taxPct)??1.5,insYr:1500,hoa:250,maintPct:5,vacPct:5,mgmtPct:0,mode:'mortgage'};
+  S.queue=[{id:'q-cushion',type:'cushion',on:true},{id:'q-rental',type:'rental',on:true}];
+  S.whatif={off:[],incDrop:0,expRise:0};
+  const mk=n=>({name:'',role:'',fam:'other',inc:(S.incomes[n]||S.incomes[0]||{}).id,extra:1000,commPct:100,salesBase:'total'});
+  S.motiv={p1:mk(0),p2:mk(1)};
+}
+function vMotiv(){
+  const opt=sel=>S.incomes.map(i=>`<option value="${i.id}"${sel===i.id?' selected':''}>${esc(i.name||t('name'))}</option>`).join('');
+  const famOpt=sel=>Object.entries(FAM).map(([k,f])=>`<option value="${k}"${sel===k?' selected':''}>${S.lang==='en'?f.en:f.uk}</option>`).join('');
+  const person=k=>{const p=S.motiv[k];return `<div class="card" data-c="mot">
+    <div class="cardhead"><h2 id="mname-${k}">${esc(p.name||'')}</h2></div>
+    <div class="fields">
+      <label>${t('pName')}<input data-mot="${k}" data-f="name" value="${esc(p.name)}"></label>
+      <label>${t('linkedTo')}<select data-mot="${k}" data-f="inc">${opt(p.inc)}</select></label>
+    </div>
+    <label class="stack">${t('whoNow')}<input data-mot="${k}" data-f="role" value="${esc(p.role)}" placeholder="${t('whoPh')}"></label>
+    <label class="stack"><span>${t('pField')} <span class="note" id="mauto-${k}"></span></span><select data-mot="${k}" data-f="fam" id="mfam-${k}">${famOpt(p.fam)}</select></label>
+    <label class="stack">${t('extraLbl')}<input class="n" inputmode="decimal" data-mot="${k}" data-f="extra" id="mx-${k}" value="${esc(p.extra)}"></label>
+    <div class="presets">${[500,1000,2000,3000,5000].map(v=>`<button data-act="mpreset" data-k="${k}" data-v="${v}">+${money(v)}</button>`).join('')}</div>
+    <div class="kv" id="mkv-${k}"></div>
+    <div class="sales">
+      <div class="cardhead"><h3 style="margin:0">${t('salesTitle')}</h3>
+        <div class="seg"><button data-act="sbase" data-k="${k}" data-v="total" class="${(p.salesBase||'total')==='total'?'on':''}">${t('salesBaseTot')}</button><button data-act="sbase" data-k="${k}" data-v="extra" class="${p.salesBase==='extra'?'on':''}">${t('salesBaseExtra')}</button></div></div>
+      <label class="inline">${t('commLbl')}<input class="n" inputmode="decimal" data-mot="${k}" data-f="commPct" value="${esc(p.commPct??100)}"></label>
+      <div class="note" id="msn-${k}"></div>
+      <div class="tablewrap"><table id="mst-${k}"></table></div>
+    </div>
+  </div>`};
+  const roles=k=>`<div class="card" data-c="mot">
+    <div class="cardhead"><h2 id="mrh-${k}"></h2><span class="hbtns" id="mai-${k}"></span></div>
+    <div class="note" id="mrt-${k}"></div>
+    <div class="roles" id="mroles-${k}"></div></div>`;
+  return `<section data-c="mot">
+    <div class="sechead"><h2>${t('motTitle')}</h2></div>
+    <p class="explain">${t('motIntro')}</p>
+    <div class="people">${person('p1')}${person('p2')}</div>
+  </section>
+  <section data-c="inc">
+    <div class="sechead"><h2>${t('motResult')}</h2></div>
+    <div class="callout" id="mcall"></div>
+    <div class="tablewrap"><table id="mtable"></table></div>
+  </section>
+  <section data-c="mot">
+    <div class="sechead"><h2>${t('rolesSec')}</h2></div>
+    <div class="legend-types">${PTYPES.map(x=>`<span class="pill ${PCOL[x]}">${t('ptype')[x]}</span>`).join('')}</div>
+    <div class="people">${roles('p1')}${roles('p2')}</div>
+    <p class="explain">${t('rolesNote')}</p>
+  </section>`;
+}
+function renderPaths(k){
+  const p=S.motiv[k], pi=personIncome(k), F=FAM[p.fam]||FAM.other;
+  set('mrh-'+k,t('growFor',esc(p.name||'—')));
+  set('mrt-'+k,t('growSub',kFmt(pi.nowG*12),kFmt(pi.target),S.lang==='en'?F.en:F.uk));
+  const sig=[p.role,p.fam,Math.round(pi.target/1000),S.lang].join('|');
+  const useAi=p.ai&&p.ai.sig===sig&&p.showAi!==false&&Array.isArray(p.ai.list);
+  let btns='';
+  if(sampleFn){
+    if(aiBusy[k])btns=`<span class="note">${t('aiBusy')}</span>`;
+    else if(useAi)btns=`<button class="small" data-act="mcat" data-k="${k}">${t('aiShowBase')}</button><button class="small" data-act="mai" data-k="${k}">${t('aiAgain')}</button>`;
+    else btns=`<button class="small primary" data-act="mai" data-k="${k}">${t('aiBtn')}</button>`;
+  }
+  set('mai-'+k,btns);
+  const list=useAi?p.ai.list:pathsFor(k);
+  set('mroles-'+k,(useAi?`<p class="note" style="margin:4px 0">${t('aiLbl')}</p>`:'')+(list.length?list.map((o,i)=>pathRow(o,i,pi.target)).join(''):`<p class="note">${t('rolesNone')}</p>`));
+}
+async function askAI(k){
+  if(!sampleFn||aiBusy[k])return;
+  const p=S.motiv[k], pi=personIncome(k), F=FAM[p.fam]||FAM.other;
+  aiBusy[k]=true;renderPaths(k);
+  const lang=S.lang==='en'?'English':'Ukrainian';
+  const prompt=`You are a US career coach. A person living on Long Island, New York, describes their current work as: "${p.role||F.en}" (field: ${F.en}).
+They now earn about $${Math.round(pi.nowG*12)} per year before tax and want to reach about $${Math.round(pi.target)} per year.
+Suggest exactly 10 realistic next career moves for THIS person, ordered from the easiest/fastest to the hardest. Mix the types: "up" (step up in the same role), "shift" (easy move to an adjacent role using current skills), "study" (needs a course or certificate), "switch" (full career change), "biz" (own business or freelance).
+Use realistic US pay ranges for the New York metro area.
+Return ONLY a JSON array of 10 objects with keys: name (job title in ${lang}), type (one of up|shift|study|switch|biz), low (annual USD integer), high (annual USD integer), months (integer months to make the move), note (max 8 words in ${lang}: what to learn or do first).`;
+  try{
+    const res=await sampleFn.json(prompt,{modelTier:'default'});
+    const arr=(Array.isArray(res)?res:(res&&res.items)||[]).filter(o=>o&&o.name).slice(0,10)
+      .map(o=>({name:String(o.name),type:PTYPES.includes(o.type)?o.type:'shift',low:+o.low||0,high:+o.high||0,months:Math.max(0,Math.round(+o.months||0)),note:o.note?String(o.note):''}));
+    if(arr.length){p.ai={sig:[p.role,p.fam,Math.round(pi.target/1000),S.lang].join('|'),list:arr};p.showAi=true;markDirty()}
+  }catch(e){const el=$('mrt-'+k);if(el)el.innerHTML+=` · <span class="neg">${e&&e.code==='not_granted'?t('aiDenied'):t('aiFail')}</span>`}
+  aiBusy[k]=false;renderPaths(k);
+}
+function cMotiv(c){
+  const m=calc(false,true);
+  ['p1','p2'].forEach(k=>{
+    const p=S.motiv[k], pi=personIncome(k);
+    set('mname-'+k,esc(p.name||'—'));
+    set('mkv-'+k,`<div><span>${t('nowGross')}</span><b>${money(pi.nowG)} ${t('perMo')} · ${money(pi.nowG*12)} ${t('perYearAbbr')}</b></div>
+      <div class="tot"><span>${t('newGross')}</span><b>${money(pi.newG)} ${t('perMo')} · ${money(pi.newG*12)} ${t('perYearAbbr')}</b></div>
+      <div><span></span><b class="posc">${t('extraNet',money(pi.x*(1-pi.tax/100)))}</b></div>`);
+    set('mauto-'+k,p.famManual?'':'· '+t('autoDet'));
+    const G=p.salesBase==='extra'?pi.x:pi.newG, N=G*(1-pi.tax/100), cp=Math.max(1,+(p.commPct??100)||100);
+    set('msn-'+k,t('salesNote',money(G),money(N)));
+    set('mst-'+k,`<thead><tr><th class="l">${t('sCnt')}</th><th>${t('sEarn')}</th>${cp<100?`<th>${t('sDeal')}</th>`:''}<th>${t('sNet')}</th></tr></thead><tbody>${[3,5,10,20].map(n=>`<tr><td><b>${n}</b></td><td>${money(G/n)}</td>${cp<100?`<td>${money(G/n/(cp/100))}</td>`:''}<td class="posc">${money(N)}</td></tr>`).join('')}</tbody>`);
+    renderPaths(k);
+  });
+  set('mcall',`<div class="cardbig">${t('motSur',money(c.sur),money(m.sur))}</div><div class="note">${t('extraNet',money(m.net-c.net))}</div>`);
+  const rB=goalsRate(c,c.sur), rM=goalsRate(m,m.sur), have=goalsHave(c);
+  const iB=queueItems(c), iM=queueItems(m), qB=runQueue(iB,rB,have), qM=runQueue(iM,rM,have);
+  const w=x=>x===null?`<span class="neg">${t('never')}</span>`:x===0?t('now'):whenStr(x);
+  const start=+S.startSavings||0;
+  set('mtable',`<thead><tr><th></th><th>${t('colNow')}</th><th>${t('colRaise')}</th><th>${t('colFaster')}</th></tr></thead><tbody>
+    <tr><th class="l" colspan="4">${t('motGoals')}</th></tr>
+    ${iB.map((it,i)=>`<tr><td>${esc(itemName(it.q))}</td><td>${w(qB[i])}</td><td>${w(qM[i])}</td><td class="posc">${qB[i]===null&&qM[i]!==null?t('becomes'):qB[i]!==null&&qM[i]!==null&&qB[i]>qM[i]?dur(qB[i]-qM[i]):'—'}</td></tr>`).join('')}
+    <tr><th class="l" colspan="4" style="padding-top:16px">${t('savTitle')}</th></tr>
+    ${[5,10,20].map(y=>{const a=start+c.sur*12*y,b=start+m.sur*12*y;return `<tr><td>${t('motSav',t('years',y))}${+S.age?` · ${+S.age+y}`:''}</td><td>${money(a)}</td><td class="posc">${money(b)}</td><td class="posc">${signed(b-a)}</td></tr>`}).join('')}
+  </tbody>`);
+}
+
+/* ================= render: computed ================= */
+const $=id=>document.getElementById(id);
+const set=(id,h)=>{const el=$(id);if(el)el.innerHTML=h};
+function cushionInfo(c){
+  const target=(+S.cushion.months||0)*c.exp, have=+S.startSavings||0, cover=c.exp>0?have/c.exp:0;
+  const st=cover>=(+S.cushion.months||0)?'good':cover>=3?'ok':'low';
+  return {target,have,cover,st};
+}
+function renderCalc(){
+  const c=calc(), ci=cushionInfo(c);
+  set('mini',`<span>${t('net')}<b class="posc">${money(c.net)}</b></span><span>${t('exp')}<b class="neg">${money(c.exp)}</b></span><span>${c.sur>=0?t('sur'):t('def')}<b style="color:${c.sur>=0?'var(--accent)':'var(--exp)'}">${money(c.sur)}</b></span><span>${t('cushion')}<b style="color:var(--${ci.st==='good'?'inc':ci.st==='ok'?'warn':'exp'})">${t('months',pct1(ci.cover))}</b></span>`);
+  ({overview:cOverview,goals:cGoals,rental:cRental,whatif:cWhatif,budget:cBudget,motiv:cMotiv})[tab](c,ci);
+}
+function cOverview(c,ci){
+  const tile=(cls,lbl,mo,note)=>`<div class="tile ${cls}"><span class="lbl">${lbl}</span><span class="big ${mo<0?'neg':''}">${money(mo)}</span><span class="yr">${money(mo*12)} ${t('perYr')}</span><span class="note">${note}</span></div>`;
+  set('flow',tile('t-gross',t('gross'),c.gross,t('srcCount',S.incomes.length))+tile('t-net',t('net'),c.net,t('taxes',money(c.tax)))+
+    tile('t-exp',t('exp'),c.exp,t('expSplit',money(c.stable),money(c.irr)))+tile('t-sur',c.sur>=0?t('sur'):t('def'),c.sur,c.net>0?t('pctNet',Math.round(c.sur/c.net*100)):''));
+  set('assetline',S.assets.length?t('astLine',money(c.astValue),money(c.astInc),money(c.astInc*12)):'');
+  // cushion
+  const rate=goalsRate(c), gap=Math.max(0,ci.target-ci.have), m=gap<=0?0:(rate>0?Math.ceil(gap/rate):null);
+  set('cush-pill',`<span class="pill ${ci.st==='good'?'good':ci.st==='ok'?'mid':'bad'}">${ci.st==='good'?t('stGood'):ci.st==='ok'?t('stOk'):t('stLow')}</span>`);
+  set('cush',`<div class="cardbig">${t('cushionCovers',t('months',pct1(ci.cover)))}</div>
+    <div class="prog"><i style="width:${ci.target>0?Math.min(100,ci.have/ci.target*100):100}%"></i></div>
+    <div class="kv"><div><span>${t('cushionTarget')}</span><b>${money(ci.target)}</b></div><div><span>${t('cushionHave')}</span><b>${money(ci.have)}</b></div>
+    ${gap>0?`<div><span>${t('cushionGap')}</span><b class="neg">${money(gap)}</b></div>`:''}</div>
+    <div class="note">${gap<=0?t('cushionDone'):m===null?t('cushionNever'):t('cushionEta',dur(m))}</div>`);
+  // next goal
+  const items=queueItems(c), res=runQueue(items,goalsRate(c),goalsHave(c)), age=+S.age||0;
+  const k=res.findIndex(r=>r!==0);
+  if(!items.length)set('nextgoal',`<div class="note">${t('noGoals')}</div>`);
+  else{const idx=k<0?items.length-1:k, it=items[idx], mm=res[idx];
+    set('nextgoal',`<div class="lbl">${idx+1}. ${esc(itemName(it.q))}</div><div class="cardbig ${mm===null?'neg':''}">${mm===null?t('never'):mm===0?t('now'):whenStr(mm)}</div>
+      <div class="note">${mm===null||mm===0?'':t('inX',dur(mm))+(age?' · '+t('ageAt',age+Math.floor(mm/12)):'')}</div>
+      <div class="kv"><div><span>${t('needLbl')}</span><b>${money(it.need)}</b></div></div>
+      <div class="note">${t('goalRate',money(goalsRate(c)),money(goalsHave(c)))}</div>`)}
+  renderSandbox(c);
+}
+function renderSandbox(c,skip){
+  const custom=S.sandbox!==null&&S.sandbox!==undefined, mo=savingRate(c);
+  const r=$('sb-range'), n=$('sb-num'); if(!r)return;
+  r.max=Math.max(5000,Math.ceil(Math.max(mo,c.sur)*2/500)*500);r.min=Math.min(0,Math.floor(Math.min(mo,c.sur)/500)*500);
+  if(skip!=='range')r.value=mo; if(skip!=='num')n.value=mo;
+  $('sb-reset').hidden=!custom;
+  $('sb-note').textContent=custom?t('sbCustom',money(c.sur)):t('sbActual');
+  const sv=S.showAstVal, start=+S.startSavings||0, age=+S.age||0;
+  set('sav-head',`<tr><th class="l">${t('cIn')}</th><th class="l">${t('cAge')}</th><th><span class="dot" style="background:var(--accent)"></span>${t('cSur')}</th><th><span class="dot" style="background:var(--astinc)"></span>${t('cAi')}</th>${sv?`<th><span class="dot" style="background:var(--astval)"></span>${t('cAv')}</th>`:''}<th>${t('cTot')}</th><th class="l th-mix">${t('cMix')}</th></tr>`);
+  const rows=HORIZONS.map(y=>{const s=start+mo*12*y, ai=c.astInc*12*y, av=sv?c.astValue:0;return {y,s,ai,av,tot:s+ai+av}});
+  const mx=Math.max(1,...rows.map(r=>Math.max(0,r.s)+r.ai+r.av));
+  set('horizons',rows.map(r=>`<tr><td>${t('years',r.y)}</td><td class="age">${age?age+r.y:'—'}</td>
+    <td class="c-save ${r.s<0?'neg':''}">${money(r.s)}</td><td class="c-ai">${money(r.ai)}</td>${sv?`<td class="c-av">${money(r.av)}</td>`:''}
+    <td class="tot ${r.tot<0?'neg':''}">${money(r.tot)}</td>
+    <td class="barcell"><div class="bar"><i style="width:${Math.max(0,r.s)/mx*100}%;background:var(--accent)"></i><i style="width:${r.ai/mx*100}%;background:var(--astinc)"></i>${sv?`<i style="width:${r.av/mx*100}%;background:var(--astval)"></i>`:''}</div></td></tr>`).join(''));
+  set('sav-explain',t('savExplain',sv));
+}
+function goalResultHTML(it,m,have,age,extra){
+  const pct=it.need>0?Math.min(100,Math.max(0,have/it.need*100)):100;
+  return `<div class="qwhen ${m===null?'neg':''}">${m===null?t('never'):m===0?t('now'):whenStr(m)}</div>
+    <div class="qsub">${m===null||m===0?'':t('inX',dur(m))+(age?' · '+t('ageAt',age+Math.floor(m/12)):'')}${extra?(m===null||m===0?'':' · ')+extra:''}</div>`;
+}
+function cGoals(c){
+  const items=queueItems(c), rate=goalsRate(c), have=goalsHave(c), res=runQueue(items,rate,have), age=+S.age||0;
+  set('goal-rate',t('goalRate',money(rate),money(have)));
+  const nextIdx=res.findIndex(r=>r!==0);
+  S.queue.forEach((q,i)=>{const el=$('qi-'+q.id);if(el){el.classList.toggle('next',false)}});
+  items.forEach((it,i)=>{
+    const q=it.q, m=res[i];
+    if(q.type!=='buy')set('qneed-'+q.id,`${t('needLbl')} <b style="font-family:var(--f-num)">${money(it.need)}</b>${q.type==='rental'?' · '+(S.rental.mode==='cash'?t('modeCash'):t('modeMortgage')):''}`);
+    const extra=q.type==='rental'?`<span class="${it.cf<0?'neg':'posc'}">${t('after',signed(it.cf))}</span>`:'';
+    set('qres-'+q.id,goalResultHTML(it,m,have,age,extra));
+    const el=$('qi-'+q.id);if(el&&i===nextIdx)el.classList.add('next');
+  });
+  S.queue.filter(q=>!q.on).forEach(q=>{set('qres-'+q.id,'');if(q.type!=='buy'){const it=queueItemsAll(c).find(x=>x.q.id===q.id);if(it)set('qneed-'+q.id,`${t('needLbl')} <b style="font-family:var(--f-num)">${money(it.need)}</b>`)}});
+}
+function queueItemsAll(c){const save=S.queue;S.queue=save.map(q=>Object.assign({},q,{on:true}));const r=queueItems(c);S.queue=save;return r}
+function cRental(){
+  const rc=rentalCalc(), R=S.rental;
+  const card=(o,title,key)=>{const good=o.cf>=0;
+    const line=(l,v,cls)=>`<div><span>${l}</span><b class="${cls||''}">${v}</b></div>`;
+    return `<div class="card${R.mode===key?' hi':''}">
+      <div class="cardhead"><h2>${title}</h2><span class="pill ${good?'good':'bad'}">${good?t('vGood'):t('vBad',money(-o.cf))}</span></div>
+      <div class="kv">
+        ${line(t('rRent'),money(rc.rent))}
+        ${rc.vac?line(t('rVac'),'−'+money(rc.vac).replace('−','')):''}
+        ${o.pi?line(t('rMort'),'−'+money(o.pi)):''}
+        ${line(t('rTax'),'−'+money(rc.tax))}${line(t('rIns'),'−'+money(rc.ins))}
+        ${rc.hoa?line(t('rHoa'),'−'+money(rc.hoa)):''}${rc.maint?line(t('rMaint'),'−'+money(rc.maint)):''}${rc.mgmt?line(t('rMgmt'),'−'+money(rc.mgmt)):''}
+        <div class="tot"><span>${t('rCf')}</span><b class="${good?'posc':'neg'}">${signed(o.cf)}</b></div>
+      </div>
+      <div class="kv">
+        ${line(t('rCash'),money(o.cash))}
+        ${line(t('rCoc'),pct1(o.coc)+'%',o.coc<0?'neg':'')}
+        ${line(t('rCap'),pct1(rc.cap)+'%')}
+        ${line(t('rBe'),money(o.be)+' '+t('perMo'))}
+      </div>
+      ${R.mode===key?`<div class="note">✓ ${t('inGoals')}</div>`:`<div><button class="small" data-act="rmode" data-k="${key}">${t('useInGoals')}</button></div>`}
+    </div>`};
+  set('rental-res',card(rc.m,t('withMortgage'),'mortgage')+card(rc.c,t('allCash'),'cash'));
+}
+function cWhatif(c,ci){
+  const s=calc(true), off=new Set(S.whatif.off);
+  const rateB=c.sur+(S.useAst?c.astInc:0), rateS=s.sur+(S.useAst?s.astInc:0);
+  const have=+S.startSavings||0;
+  const run=x=>x.sur>=0?t('wRunInf'):t('months',pct1(have/(-x.sur)));
+  const cov=x=>x.exp>0?t('months',pct1(have/x.exp)):'—';
+  const row=(l,a,b,money_)=>{const d=b-a;return `<tr><td>${l}</td><td>${money(a)}</td><td>${money(b)}</td><td class="${Math.abs(d)<0.5?'':(d>0)===money_?'d-pos':'d-neg'}">${Math.abs(d)<0.5?'—':signed(d)}</td></tr>`};
+  const itB=queueItems(c), itS=queueItems(s), rB=runQueue(itB,rateB,goalsHave(c)), rS=runQueue(itS,rateS,goalsHave(s));
+  const w=m=>m===null?`<span class="neg">${t('never')}</span>`:m===0?t('now'):whenStr(m);
+  set('wi-table',`<thead><tr><th></th><th>${t('colNow')}</th><th>${t('colScen')}</th><th>${t('colDiff')}</th></tr></thead><tbody>
+    ${row(t('wNet'),c.net,s.net,true)}${row(t('wExp'),c.exp,s.exp,false)}${row(t('wSur'),c.sur,s.sur,true)}${row(t('wRate'),rateB,rateS,true)}
+    <tr><td>${t('wCush')}</td><td>${cov(c)}</td><td>${cov(s)}</td><td></td></tr>
+    <tr><td>${t('wRun')}</td><td>${run(c)}</td><td class="${s.sur<0?'neg':''}">${run(s)}</td><td></td></tr>
+    <tr><th class="l" colspan="4" style="padding-top:16px">${t('wGoals')}</th></tr>
+    ${itB.map((it,i)=>`<tr><td>${esc(itemName(it.q))}</td><td>${w(rB[i])}</td><td>${w(rS[i])}</td><td>${rB[i]!==null&&rS[i]!==null&&rB[i]!==rS[i]?`<span class="${rS[i]<rB[i]?'posc':'neg'}">${rS[i]<rB[i]?'−':'+'}${dur(Math.abs(rS[i]-rB[i]))}</span>`:''}</td></tr>`).join('')}
+  </tbody>`);
+}
+function cBudget(c){
+  S.incomes.forEach(i=>set_mo(i.id,`${money(moIncN(i))}<small>${t('grossSmall',money(moIncG(i)))}</small>`));
+  S.assets.forEach(a=>set_mo(a.id,`${money(moAst(a))}<small>${a.value>0?t('yieldSmall',pct1(moAst(a)*12/a.value*100)):t('grossSmall',money(moAstG(a)))}</small>`));
+  S.expenses.forEach(e=>set_mo(e.id,`${money(moExp(e))}<small>${t('perYrSmall',money(moExp(e)*12))}</small>`));
+  set('sum-inc',`<b>${money(c.net)}</b> ${t('perMo')}`);
+  set('sum-ast',`${money(c.astValue)} · ${money(c.astInc)} ${t('perMo')}`);
+  set('sum-exp',`<b>${money(c.exp)}</b> ${t('perMo')} · ${money(c.exp*12)} ${t('perYr')}`);
+  set('sum-stable',money(c.stable)+' '+t('perMo'));
+  set('sum-irr',money(c.irr)+' '+t('perMo'));
+}
+function set_mo(id,h){const el=document.querySelector(`[data-mo="${id}"]`);if(el)el.innerHTML=h}
+
+/* ================= saving ================= */
+function renderStatus(){
+  const st=$('status'), b=$('savebtn'); if(!st)return;
+  if(saving){st.textContent=t('saving');st.className='status';b.disabled=true;return}
+  if(STANDALONE){st.textContent=t('autoSaved');st.className='status';b.hidden=true;return}
+  if(dirty){st.textContent=art?t('unsaved'):t('localOnly');st.className='status dirty'}
+  else{st.textContent=S.savedAt?t('savedAt',new Date(S.savedAt).toLocaleString(S.lang==='en'?'en-US':'uk-UA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})):'';st.className='status'}
+  b.hidden=!art; b.disabled=!dirty;
+}
+function markDirty(){dirty=true;try{localStorage.setItem(DKEY,JSON.stringify({base:embedded.savedAt,state:S}))}catch(e){}renderStatus()}
+async function save(){
+  if(!art||saving)return; saving=true; renderStatus();
+  const st=JSON.parse(JSON.stringify(S)); st.savedAt=Date.now();
+  const json=JSON.stringify(st).replace(/</g,'\\u003c');
+  const css=$('app-css').textContent, js=$('app-js').textContent;
+  const fonts=[...document.querySelectorAll('link[href*="fonts.g"]')].map(l=>l.outerHTML).join('');
+  const html='<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>'
+    +'<title>Сімейний фінплан</title>'+fonts+'<style id="app-css">'+css+'</style><div id="app"></div><script type="application/json" id="state">'+json+'<\/script><script id="app-js">'+js+'<\/script></body></html>';
+  try{try{localStorage.removeItem(DKEY)}catch(e){} await art.publish(html)}
+  catch(e){saving=false;
+    try{localStorage.setItem(DKEY,JSON.stringify({base:embedded.savedAt,state:S}))}catch(_){}
+    renderStatus();const s=$('status');if(s)s.textContent=(e&&e.code==='conflict')?t('conflict'):t('saveFail');}
+}
+
+/* ================= events ================= */
+document.addEventListener('input',e=>{const x=e.target;
+  if(x.type==='checkbox'&&x.id&&x.id.startsWith('c-')){S[x.id.slice(2)]=x.checked;markDirty();renderCalc();return}
+  if(x.dataset.act==='qon'){const q=S.queue.find(q=>q.id===x.dataset.id);if(q){q.on=x.checked;markDirty();$('qi-'+q.id).classList.toggle('off',!q.on);renderCalc()}return}
+  if(x.id==='sb-range'||x.id==='sb-num'){S.sandbox=num(x.value);markDirty();renderSandbox(calc(),x.id==='sb-range'?'range':'num');return}
+  if(x.dataset.mot){const k=x.dataset.mot,f=x.dataset.f,p=S.motiv[k];p[f]=f==='extra'?num(x.value):x.value;
+    if(f==='fam')p.famManual=true;
+    if(f==='commPct')p.commPct=num(x.value);
+    if(f==='role'&&!p.famManual){const d=detectFam(x.value);if(d!=='other'||!x.value.trim()){p.fam=d;const sel=$('mfam-'+k);if(sel)sel.value=d}}
+    markDirty();renderCalc();return}
+  const f=x.dataset&&x.dataset.f;if(!f)return;
+  const v=x.dataset.t==='n'?num(x.value):x.value;
+  if(x.dataset.p!==undefined){if(x.dataset.p)S[x.dataset.p][f]=v;else S[f]=v}
+  else{const it=S[x.dataset.l].find(o=>o.id===x.dataset.id);if(!it)return;it[f]=v}
+  markDirty(); if(f==='freq')renderAll(); else renderCalc();
+});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.tagName==='INPUT')return;const a=b.dataset.act,l=b.dataset.l;
+  if(a==='tab'){tab=b.dataset.k;try{localStorage.setItem(TKEY,tab)}catch(_){}renderAll();window.scrollTo({top:0});return}
+  if(a==='lang'){S.lang=b.dataset.k;markDirty();renderAll();return}
+  if(a==='add'){
+    if(l==='assets')S.assets.push({id:uid(),name:'',value:0,income:0,freq:'m',tax:10});
+    else if(l==='incomes')S.incomes.push({id:uid(),name:'',amount:0,freq:'m',tax:30});
+    else if(l==='queue')S.queue.push({id:uid(),type:'buy',name:'',price:0,on:true});
+    else S.expenses.push({id:uid(),name:'',amount:0,freq:b.dataset.k||'m'});
+    markDirty();renderAll();
+    const ins=document.querySelectorAll(`input[data-l="${l}"][data-f="name"]`);if(ins.length)ins[ins.length-1].focus();
+  } else if(a==='del'){S[l]=S[l].filter(o=>o.id!==b.dataset.id);markDirty();renderAll()}
+  else if(a==='qup'||a==='qdown'){const i=S.queue.findIndex(q=>q.id===b.dataset.id),j=a==='qup'?i-1:i+1;if(i<0||j<0||j>=S.queue.length)return;
+    [S.queue[i],S.queue[j]]=[S.queue[j],S.queue[i]];markDirty();renderAll()}
+  else if(a==='rmode'){S.rental.mode=b.dataset.k;markDirty();renderCalc()}
+  else if(a==='wtoggle'){const id=b.dataset.id,o=new Set(S.whatif.off);o.has(id)?o.delete(id):o.add(id);S.whatif.off=[...o];
+    b.classList.toggle('off',o.has(id));b.setAttribute('aria-pressed',String(!o.has(id)));markDirty();renderCalc()}
+  else if(a==='wreset'){S.whatif={off:[],incDrop:0,expRise:0};markDirty();renderAll()}
+  else if(a==='mai'){askAI(b.dataset.k)}
+  else if(a==='sbase'){S.motiv[b.dataset.k].salesBase=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));markDirty();renderCalc()}
+  else if(a==='reset'){resetAsk=true;renderAll()}
+  else if(a==='vault'){vaultAsk=true;renderAll();const el=$('vaultpw');if(el)el.focus()}
+  else if(a==='vaultno'){vaultAsk=false;renderAll()}
+  else if(a==='resetno'){resetAsk=false;renderAll()}
+  else if(a==='resetyes'){resetAsk=false;resetPlan();markDirty();renderAll()}
+  else if(a==='mcat'){S.motiv[b.dataset.k].showAi=false;markDirty();renderPaths(b.dataset.k)}
+  else if(a==='mpreset'){S.motiv[b.dataset.k].extra=+b.dataset.v;const el=$('mx-'+b.dataset.k);if(el)el.value=b.dataset.v;markDirty();renderCalc()}
+  else if(a==='sbreset'){S.sandbox=null;markDirty();renderSandbox(calc())}
+  else if(a==='save')save();
+  else if(a==='export'){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const u=URL.createObjectURL(blob);const l=document.createElement('a');l.href=u;l.download='family-plan-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+  else if(a==='import'){$('impfile').click()}
+});
+document.addEventListener('submit',async e=>{if(e.target.id!=='vaultform')return;e.preventDefault();
+  const msg=$('vaultmsg'),pw=$('vaultpw').value;msg.textContent=t('vaultBusy');msg.className='note';
+  try{const d=await unlockVault(pw);S=d;markDirty();location.reload()}
+  catch(_){await new Promise(r=>setTimeout(r,800));msg.textContent=t('vaultWrong');msg.className='note neg';$('vaultpw').select()}
+});
+document.addEventListener('change',e=>{if(e.target.id!=='impfile'||!e.target.files[0])return;const fr=new FileReader();
+  fr.onload=()=>{try{const d=JSON.parse(fr.result);if(!Array.isArray(d.incomes)||!Array.isArray(d.expenses))throw 0;S=d;markDirty();location.reload()}catch(_){const s=$('status');if(s)s.textContent=t('importErr')}};
+  fr.readAsText(e.target.files[0])});
+renderAll();
+if(window.claude&&window.claude.use){window.claude.use('artifact').then(a=>{art=a;STANDALONE=false;renderStatus()}).catch(()=>{});window.claude.use('sample').then(f=>{sampleFn=f;if(f&&tab==='motiv')renderCalc()}).catch(()=>{})}
+})();
+</script>
+
+</body>
+</html>
